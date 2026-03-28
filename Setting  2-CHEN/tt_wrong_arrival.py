@@ -77,7 +77,7 @@ def solve_rvi_decoupled(nu, tol=1e-6):
 # --- 4. 二分查找与理论验证 ---
 def find_index(s, k):
     """找到使得 Q(s, k) = Q(s, k+1) 的 nu"""
-    low, high = 2, 20.0
+    low, high = -10, 20.0
     for _ in range(100):
         mid = (low + high) / 2
         h = solve_rvi_decoupled(mid)
@@ -122,6 +122,6 @@ for s in S_SPACE:
         })
 
 df = pd.DataFrame(data)
-df.to_excel("Whittle_Index_right_const.xlsx", index=False)
+df.to_excel("Whittle_Index_wrong_const1.xlsx", index=False)
 print(f"Total time used is {time.time() - start_time:.4f}s\n")
-print("计算完成，结果已保存至 Whittle_Index_right_const.xlsx")
+print("计算完成，结果已保存至 Whittle_Index_wrong_const1.xlsx")
