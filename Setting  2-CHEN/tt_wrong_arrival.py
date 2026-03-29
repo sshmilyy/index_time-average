@@ -5,16 +5,16 @@ from parameter_setting_CHEN106 import *
 import time
 # --- 1. 惩罚函数 F 与参数配置 ---
 P_COST = 1.0   # 假设单位电价 p=1.0 (您可以根据实际 Proposition 1 调整)
-BETA = 0.8     # 假设惩罚系数，F(x) = beta * x^2
-def F(x):
+BETA = 0.8     # 假设惩罚系数，f(x) = beta * x^2
+def f(x):
     return BETA * (max(0, x)**2)
 
-def delta_F(x):
+def delta_f(x):
     if x <= 0: return 0
-    return F(x) - F(x-1)
+    return f(x) - f(x-1)
 
 # 车辆到达逻辑：假设如果槽位空，每步有 lambda 的概率来新车
-LAMBDA_ARR = 0.8
+LAMBDA_ARR = 0.5
 
 def get_arrival_prob(r, l):
     """从 parameter_setting 的分布中获取概率"""
@@ -28,13 +28,13 @@ def get_arrival_prob(r, l):
 def get_reward(s, a, nu):
     """计算补贴后的收益 R_w - nu * a"""
     r, l = s
-    if r == 0 or l == 0: return -nu * a
+    if r == 0 or l == 0:
+        return 0
     # 基础收益 (alpha - p) * min(a, r)
     imm_reward = (alpha - P_COST) * min(a, r)
-    # L=1 时的到期惩罚 [cite: 7]
-    penalty = F(r - a) if l == 1 else 0
+    # L=1 时的到期惩罚
+    penalty = f(r - a) if l == 1 else 0
     return imm_reward - penalty - nu * min(a, r)
-
 
 # --- 修改后的转移函数：解耦未来车辆 ---
 def get_transitions_decoupled(s, a):
@@ -43,40 +43,40 @@ def get_transitions_decoupled(s, a):
         # 当前车辆未离开，继续追踪
         next_s = (max(0, r - a), l - 1)
         return [(S_TO_IDX[next_s], 1.0)]
-    else:
-        # 车辆离开。为了验证单车 Index，我们跳转到一个虚拟的“吸收态”
-        # 这个态的价值固定为 0，不参与 nu 的惩罚计算
+    elif l == 1:
         return [(S_TO_IDX[(0, 0)], 1.0)]
+    else:
+        trans = []
+        trans.append((S_TO_IDX[(0, 0)], 1.0 - LAMBDA_ARR)) # 无新车
+        for rs in r_dist:
+            for ls in l_dist:
+                prob = LAMBDA_ARR * get_arrival_prob(rs, ls)
+                if prob > 0:
+                    trans.append((S_TO_IDX[(rs, ls)], prob))
+        return trans
 
-
-# --- 修改后的 RVI 逻辑 -
 # --车辆到L=1的时候，会强制进入（0，0）
-def solve_rvi_decoupled(nu, tol=1e-6):
+def solve_rvi_decoupled(nu):
+    tol = 1e-4
     h = np.zeros(NUM_STATES)
-    for _ in range(1000):
-        h_old = h.copy()
+    for _ in range(100):
+        h_new = np.zeros(NUM_STATES)
         for s_idx, s in enumerate(S_SPACE):
-            if s == (0, 0):  # 吸收态价值固定
-                h[s_idx] = 0
-                continue
-
             q_vals = []
             for a in range(MAX_CHARGE + 1):
-                # 即时奖励
                 r_imm = get_reward(s, a, nu)
-                # 转移：如果是 l=1，未来价值就是 h[0,0] = 0
-                future_v = sum(p * h_old[ns] for ns, p in get_transitions_decoupled(s, a))
+                future_v = sum(p * h[ns] for ns, p in get_transitions_decoupled(s, a))
                 q_vals.append(r_imm + future_v)
-            h[s_idx] = max(q_vals)
-
-        # 对于这种单次生命周期模型，通常使用 V 迭代即可，不需要减去 rho
-        if np.max(np.abs(h - h_old)) < tol: break
+            h_new[s_idx] = max(q_vals)
+        rho = h_new[11]
+        h_new -= rho # 标准化防止数值爆炸
+        if np.max(np.abs(h_new - h)) < tol: break
+        h = h_new
     return h
 
 
 # --- 4. 二分查找与理论验证 ---
 def find_index(s, k):
-    """找到使得 Q(s, k) = Q(s, k+1) 的 nu"""
     low, high = -10, 20.0
     for _ in range(100):
         mid = (low + high) / 2
@@ -98,7 +98,7 @@ def get_theoretical_index(r, l, i):
     else:
         # (L-1)W < R <= LW 或 R > LW 情况
         if i <= max(0, r - (l-1)*W - 1):
-            return (alpha - p) + delta_F(r - (l-1)*W - i)
+            return (alpha - p) + delta_f(r - (l-1)*W - i)
         else:
             return alpha - p
 
@@ -122,6 +122,6 @@ for s in S_SPACE:
         })
 
 df = pd.DataFrame(data)
-df.to_excel("Whittle_Index_wrong_const1.xlsx", index=False)
+df.to_excel("Whittle_Index_wrong_const2.xlsx", index=False)
 print(f"Total time used is {time.time() - start_time:.4f}s\n")
-print("计算完成，结果已保存至 Whittle_Index_wrong_const1.xlsx")
+print("计算完成，结果已保存至 Whittle_Index_wrong_const2.xlsx")

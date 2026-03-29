@@ -34,7 +34,7 @@ def get_reward(s, a, nu):
     imm_reward = (alpha - P_COST) * min(a, r)
     # L=1 时的到期惩罚 [cite: 7]
     penalty = f(r - min(a, r)) if l == 1 else 0
-    return imm_reward - penalty - nu * a
+    return imm_reward - penalty - nu * min(a, r)
 
 
 #按照L=1之后就会有车正常的进入
@@ -75,7 +75,7 @@ def solve_rvi(nu):
         h = h_new
     return h
 
-# --- 4. 二分查找与理论验证 ---（未最小化，计算的结果有问题）
+# --- 4. 二分查找与理论验证 ---
 def find_index(s, k):
     low, high = -10, 20.0
     for _ in range(100):
@@ -93,7 +93,7 @@ def find_index(s, k):
 def find_index_minimized(s, k):
     low, high = -10, 20.0
     epsilon = 1e-9  # 引入微小偏差处理数值噪声
-    for _ in range(100):
+    for _ in range(200):
         mid = (low + high) / 2
         h = solve_rvi(mid)
 
@@ -116,7 +116,7 @@ def find_index_refined(s, k, iterations=100, rvi_tol=1e-4):
     精细化 Whittle 索引寻找函数
     目标：在冷淡区间内寻找到补贴的下确界（最小值）
     """
-    low, high = -10.0, 20.0
+    low, high = -30.0, 50.0
     # 这里的 epsilon 建议略大于 RVI 的收敛 tol，以覆盖数值漂移
     num_noise_buffer = rvi_tol * 10
 
@@ -170,7 +170,7 @@ for s in S_SPACE:
     r, l = s
     if r == 0: continue
     for k in range(MAX_CHARGE):
-        num_idx = find_index(s, k)
+        num_idx = find_index_minimized(s, k)
         theo_idx = get_theoretical_index(r, l, k)
         data.append({
             'Demand_R': r,
@@ -182,6 +182,6 @@ for s in S_SPACE:
         })
 
 df = pd.DataFrame(data)
-df.to_excel("Whittle_Index_right_const.xlsx", index=False)
+df.to_excel("Whittle_Index_right_const_minimized_ar1.xlsx", index=False)
 print(f"Total time used is {time.time() - start_time:.4f}s\n")
 print("计算完成，结果已保存")

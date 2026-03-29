@@ -6,6 +6,7 @@ import time
 # --- 1. 惩罚函数 F 与参数配置 ---
 
 penalty_weight = 0.8     # 假设惩罚系数，f(x) = beta * x^2
+T=period
 def f(x):
     return penalty_weight * (max(0, x)**2)
 
@@ -14,7 +15,7 @@ def delta_f(x):
     return f(x) - f(x-1)
 
 # 车辆到达逻辑：假设如果槽位空，每步有 lambda 的概率来新车
-LAMBDA_ARR = 0.8
+LAMBDA_ARR = 0.5
 
 def get_arrival_prob(r, l):
     """从 parameter_setting 的分布中获取概率"""
@@ -25,52 +26,55 @@ def get_arrival_prob(r, l):
     return 0
 
 # --- 2. MDP 核心逻辑 ---
-def get_reward(s, a, nu):
-    """计算补贴后的收益 R_w - nu * a"""
+def get_reward(s, a, nu, t):
+    """计算 t 时刻补贴后的收益"""
+    P_COST = get_time_varying_p0(t)
     r, l = s
     if r == 0 or l == 0: return -nu * a
-    # 基础收益 (alpha - p) * min(a, r)
-    imm_reward = (alpha - get_time_varying_p0(t)) * min(a, r)
-    # L=1 时的到期惩罚 [cite: 7]
+    imm_reward = (alpha - P_COST) * min(a, r)
     penalty = f(r - a) if l == 1 else 0
     return imm_reward - penalty - nu * min(a, r)
 
 
 # --- 修改后的转移函数：解耦未来车辆 ---
-def get_transitions_decoupled(s, a):
+def get_transitions_decoupled(s, a,t):
     r, l = s
+    prob_arrival = get_time_varying_prob(t)
     if l > 1:
         # 当前车辆未离开，继续追踪
         next_s = (max(0, r - a), l - 1)
         return [(S_TO_IDX[next_s], 1.0)]
-    else:
-        # 车辆离开。为了验证单车 Index，我们跳转到一个虚拟的“吸收态”
-        # 这个态的价值固定为 0，不参与 nu 的惩罚计算
+    elif l == 1:
         return [(S_TO_IDX[(0, 0)], 1.0)]
-
+    else:
+        trans = []
+        trans.append((S_TO_IDX[(0, 0)], 1.0 - prob_arrival))  # 无新车
+        for rs in r_dist:
+            for ls in l_dist:
+                prob = LAMBDA_ARR * get_arrival_prob(rs, ls)
+                if prob > 0:
+                    trans.append((S_TO_IDX[(rs, ls)], prob))
+        return trans
 
 # --- 修改后的 RVI 逻辑 -
 # --车辆到L=1的时候，会强制进入（0，0）
-def solve_rvi_decoupled(nu, tol=1e-6):
+def solve_rvi_decoupled(nu):
+    tol = 1e-4
     h = np.zeros(NUM_STATES)
-    for _ in range(1000):
-        h_old = h.copy()
+    ref_idx = 2 # 参考状态 (0,0)
+    for _ in range(100):
+        h_new = np.zeros(NUM_STATES)
         for s_idx, s in enumerate(S_SPACE):
-            if s == (0, 0):  # 吸收态价值固定
-                h[s_idx] = 0
-                continue
-
             q_vals = []
             for a in range(MAX_CHARGE + 1):
-                # 即时奖励
                 r_imm = get_reward(s, a, nu)
-                # 转移：如果是 l=1，未来价值就是 h[0,0] = 0
-                future_v = sum(p * h_old[ns] for ns, p in get_transitions_decoupled(s, a))
+                future_v = sum(p * h[ns] for ns, p in get_transitions_decoupled(s, a))
                 q_vals.append(r_imm + future_v)
-            h[s_idx] = max(q_vals)
-
-        # 对于这种单次生命周期模型，通常使用 V 迭代即可，不需要减去 rho
-        if np.max(np.abs(h - h_old)) < tol: break
+            h_new[s_idx] = max(q_vals)
+        rho = h_new[ref_idx]
+        h_new -= rho # 标准化防止数值爆炸
+        if np.max(np.abs(h_new - h)) < tol: break
+        h = h_new
     return h
 
 
@@ -88,7 +92,7 @@ def find_index(s, k):
         else: high = mid
     return (low + high) / 2
 
-def get_theoretical_index(r, l, i):
+def get_theoretical_index(r, l, i, t):
     """Proposition 1 的理论公式 """
     W = MAX_CHARGE
     p = get_time_varying_p0(t)
