@@ -36,6 +36,8 @@ def get_reward(s, a, nu):
     penalty = f(r - min(a, r)) if l == 1 else 0
     return imm_reward - penalty - nu * a
 
+print(get_reward((1, 1), 1, -10))
+print(get_reward((1, 1), 2, -10))
 
 #按照L=1之后就会有车正常的进入
 def get_transitions(s, a):
@@ -76,22 +78,22 @@ def solve_rvi(nu):
     return h
 
 # --- 4. 二分查找与理论验证 ---（未最小化，计算的结果有问题）
-def find_index(s, k):
-    low, high = -10, 20.0
-    for _ in range(100):
-        mid = (low + high) / 2
-        h = solve_rvi(mid)
-        # 计算 Q 值
-        def q_val(a):
-            return get_reward(s, a, mid) + sum(p * h[ns] for ns, p in get_transitions(s, a))
-        if q_val(k+1) > q_val(k):
-            low = mid
-        else: high = mid
-    return (low + high) / 2
+# def find_index(s, k):
+#     low, high = -10, 20.0
+#     for _ in range(100):
+#         mid = (low + high) / 2
+#         h = solve_rvi(mid)
+#         # 计算 Q 值
+#         def q_val(a):
+#             return get_reward(s, a, mid) + sum(p * h[ns] for ns, p in get_transitions(s, a))
+#         if q_val(k+1) > q_val(k):
+#             low = mid
+#         else: high = mid
+#     return (low + high) / 2
 
 
 def find_index_minimized(s, k):
-    low, high = -10, 20.0
+    low, high = -20, 20.0
     epsilon = 1e-9  # 引入微小偏差处理数值噪声
     for _ in range(100):
         mid = (low + high) / 2
@@ -110,43 +112,9 @@ def find_index_minimized(s, k):
 
     return high
 
-
-def find_index_refined(s, k, iterations=100, rvi_tol=1e-4):
-    """
-    精细化 Whittle 索引寻找函数
-    目标：在冷淡区间内寻找到补贴的下确界（最小值）
-    """
-    low, high = -10.0, 20.0
-    # 这里的 epsilon 建议略大于 RVI 的收敛 tol，以覆盖数值漂移
-    num_noise_buffer = rvi_tol * 10
-
-    for i in range(iterations):
-        mid = (low + high) / 2
-        # solve_rvi 返回该 mid 补贴下的相对价值向量
-        h = solve_rvi(mid)
-
-        # 计算当前 mid 补贴下动作 k 和 k+1 的期望长期价值
-        def calculate_q(action):
-            reward = get_reward(s, action, mid)
-            # get_transitions 返回 (next_state, probability) 列表
-            future_val = sum(p * h[ns] for ns, p in get_transitions(s, action))
-            return reward + future_val
-
-        q_k = calculate_q(k)
-        q_k_plus_1 = calculate_q(k + 1)
-
-        # 核心逻辑修改：
-        # 如果 q_k 已经大于或等于 q_k_plus_1（考虑噪声），
-        # 说明 mid 已经达到了足以让决策者切换到低动作的临界点。
-        # 为了找“最小”满足条件的索引，我们继续在下半部分区间寻找。
-        if q_k >= q_k_plus_1 - num_noise_buffer:
-            high = mid
-        else:
-            low = mid
-
-    # 返回 high。在 inclusive search 中，high 指向满足条件的最小边界。
-    return high
-
+print(find_index_minimized((1, 1), 0))
+print(find_index_minimized((1, 1), 1))
+print(find_index_minimized((1, 1), 2))
 
 def get_theoretical_index(r, l, i):
     """Proposition 1 的理论公式 """
@@ -166,11 +134,11 @@ def get_theoretical_index(r, l, i):
 print("开始计算 Index...")
 start_time=time.time()
 data = []
-for s in S_SPACE:
+for s in S_SPACE[0:10]:
     r, l = s
     if r == 0: continue
     for k in range(MAX_CHARGE):
-        num_idx = find_index(s, k)
+        num_idx = find_index_minimized(s, k)
         theo_idx = get_theoretical_index(r, l, k)
         data.append({
             'Demand_R': r,

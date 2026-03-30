@@ -32,22 +32,24 @@ def get_reward(s, a, nu):
         return 0
     # 基础收益 (alpha - p) * min(a, r)
     imm_reward = (alpha - P_COST) * min(a, r)
-    # L=1 时的到期惩罚
-    penalty = f(r - min(a,r)) if l == 1 else 0
-    return imm_reward - penalty - nu * a
+    # L=1 时的到期惩罚 [cite: 7]
+    penalty = f(r - min(a, r)) if l == 1 else 0
+    return imm_reward - penalty - nu * min(a, r)
 
-# --- 修改后的转移函数：解耦未来车辆 ---
-def get_transitions_decoupled(s, a):
+
+#按照L=1之后就会有车正常的进入
+def get_transitions(s, a):
+    """状态转移概率"""
     r, l = s
     if l > 1:
-        # 当前车辆未离开，继续追踪
+        # 还没到期，需求减少，期限减1
         next_s = (max(0, r - a), l - 1)
         return [(S_TO_IDX[next_s], 1.0)]
     elif l == 1:
         return [(S_TO_IDX[(0, 0)], 1.0)]
     else:
         trans = []
-        trans.append((S_TO_IDX[(0, 0)], 1.0 - LAMBDA_ARR)) # 无新车
+        trans.append((S_TO_IDX[(0, 0)], 1.0 - LAMBDA_ARR))  # 无新车
         for rs in r_dist:
             for ls in l_dist:
                 prob = LAMBDA_ARR * get_arrival_prob(rs, ls)
@@ -55,8 +57,8 @@ def get_transitions_decoupled(s, a):
                     trans.append((S_TO_IDX[(rs, ls)], prob))
         return trans
 
-# --车辆到L=1的时候，会强制进入（0，0）
-def solve_rvi_decoupled(nu):
+# --- 3. 相对价值迭代 (RVI) ---
+def solve_rvi(nu):
     tol = 1e-4
     h = np.zeros(NUM_STATES)
     for _ in range(100):
@@ -65,7 +67,7 @@ def solve_rvi_decoupled(nu):
             q_vals = []
             for a in range(MAX_CHARGE + 1):
                 r_imm = get_reward(s, a, nu)
-                future_v = sum(p * h[ns] for ns, p in get_transitions_decoupled(s, a))
+                future_v = sum(p * h[ns] for ns, p in get_transitions(s, a))
                 q_vals.append(r_imm + future_v)
             h_new[s_idx] = max(q_vals)
         rho = h_new[11]
@@ -74,29 +76,30 @@ def solve_rvi_decoupled(nu):
         h = h_new
     return h
 
-
 # --- 4. 二分查找与理论验证 ---
-def find_index(s, k):
-    low, high = -10, 20.0
-    for _ in range(100):
-        mid = (low + high) / 2
-        h = solve_rvi_decoupled(mid)
-        # 计算 Q 值
-        def q_val(a):
-            return get_reward(s, a, mid) + sum(p * h[ns] for ns, p in get_transitions_decoupled(s, a))
-        if q_val(k+1) > q_val(k): low = mid
-        else: high = mid
-    return (low + high) / 2
+# def find_index(s, k):
+#     low, high = -20, 50.0
+#     for _ in range(100):
+#         mid = (low + high) / 2
+#         h = solve_rvi(mid)
+#         # 计算 Q 值
+#         def q_val(a):
+#             return get_reward(s, a, mid) + sum(p * h[ns] for ns, p in get_transitions(s, a))
+#         if q_val(k+1) > q_val(k):
+#             low = mid
+#         else: high = mid
+#     return (low + high) / 2
+#
 
 def find_index_minimized(s, k):
     low, high = -20, 20.0
     epsilon = 1e-9  # 引入微小偏差处理数值噪声
     for _ in range(100):
         mid = (low + high) / 2
-        h = solve_rvi_decoupled(mid)
+        h = solve_rvi(mid)
 
         def q_val(a):
-            return get_reward(s, a, mid) + sum(p * h[ns] for ns, p in get_transitions_decoupled(s, a))
+            return get_reward(s, a, mid) + sum(p * h[ns] for ns, p in get_transitions(s, a))
 
         # 目标：寻找最小的 nu，使得 q_val(k) >= q_val(k+1)
         # 如果当前 mid 已经满足了让 k 优于或等于 k+1 的条件
@@ -107,7 +110,6 @@ def find_index_minimized(s, k):
             low = mid
 
     return high
-
 
 
 def get_theoretical_index(r, l, i):
@@ -144,6 +146,6 @@ for s in S_SPACE:
         })
 
 df = pd.DataFrame(data)
-df.to_excel("Whittle_Index_wrong_const1.xlsx", index=False)
+df.to_excel("Whittle_Index_wrong_const_minimized_ar.xlsx", index=False)
 print(f"Total time used is {time.time() - start_time:.4f}s\n")
-print("计算完成，结果已保存至 Whittle_Index_wrong_const1.xlsx")
+print("计算完成，结果已保存")
