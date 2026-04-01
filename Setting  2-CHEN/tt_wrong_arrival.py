@@ -76,18 +76,6 @@ def solve_rvi_decoupled(nu):
 
 
 # --- 4. 二分查找与理论验证 ---
-def find_index(s, k):
-    low, high = -10, 20.0
-    for _ in range(100):
-        mid = (low + high) / 2
-        h = solve_rvi_decoupled(mid)
-        # 计算 Q 值
-        def q_val(a):
-            return get_reward(s, a, mid) + sum(p * h[ns] for ns, p in get_transitions_decoupled(s, a))
-        if q_val(k+1) > q_val(k): low = mid
-        else: high = mid
-    return (low + high) / 2
-
 def find_index_minimized(s, k):
     low, high = -20, 20.0
     epsilon = 1e-9  # 引入微小偏差处理数值噪声
@@ -144,6 +132,6 @@ for s in S_SPACE:
         })
 
 df = pd.DataFrame(data)
-df.to_excel("Whittle_Index_wrong_const1.xlsx", index=False)
+df.to_excel("Whittle_Index_wrong_const.xlsx", index=False)
 print(f"Total time used is {time.time() - start_time:.4f}s\n")
-print("计算完成，结果已保存至 Whittle_Index_wrong_const1.xlsx")
+print("计算完成，结果已保存至 Whittle_Index_wrong_const.xlsx")

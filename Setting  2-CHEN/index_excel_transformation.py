@@ -1,24 +1,24 @@
 import numpy as np
 import pandas as pd
 
-# 1. 读取降维后的 2D .npy 文件
-file_path = 'index_Stationary_Numerical_penal=0.8_chen(10,6).npy'
+# 1. 读取你最新的 .npy 文件
+file_path = 'index_cache_T24_penal0.2.npy'
 data = np.load(file_path)
 
-# 打印一下维度确认，应该是类似 (67, 3) 的二维形状
-print(f"读取的数据维度为: {data.shape}")
+# 2. 设置输出的 Excel 文件名
+output_file = 'output_24_tables.xlsx'
 
-# 2. 直接将这一个二维矩阵转为 DataFrame
-df = pd.DataFrame(data)
+# 3. 创建 Excel 写入器
+with pd.ExcelWriter(output_file) as writer:
+    # 循环 24 次，每次取出一份 67x3 的数据
+    for i in range(24):
+        # 提取切片数据
+        df_slice = pd.DataFrame(data[:, i, :])
 
-# （可选）给列命名。这里自动根据动作数量生成列名，比如 Action_0, Action_1, Action_2
-num_actions = data.shape[1]
-df.columns = [f'Action_{k}' for k in range(num_actions)]
+        # 为了美观，给这 3 列加上表头
+        df_slice.columns = ['Value_1', 'Value_2', 'Value_3']
 
-# 3. 保存为只有一个 Sheet 的 Excel 文件
-output_file = 'Index_penal=0.8_chen_num(10,6)7.xlsx'
+        # 将其保存为一个新的 Sheet，名字叫 Table_1, Table_2 ... Table_24
+        df_slice.to_excel(writer, sheet_name=f'Table_{i + 1}', index=False)
 
-# 直接导出，不需要 ExcelWriter 和 for 循环了
-df.to_excel(output_file, index=False, sheet_name='Stationary_Index')
-
-print(f"转换成功！已生成包含单一表格的 Excel 文件：{output_file}")
+print(f"转换成功！已生成包含 24 个表格的 Excel 文件：{output_file}")

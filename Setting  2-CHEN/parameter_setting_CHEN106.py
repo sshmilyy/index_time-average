@@ -31,7 +31,7 @@ S_TO_IDX = {s: i for i, s in enumerate(S_SPACE)}
 NUM_STATES = len(S_SPACE)
 A_SPACE = list(range(int(MAX_CHARGE) + 1))
 
-"""
+
 def get_time_varying_p0(t):
     hour = t % 24
     # 设定价格相对值
@@ -46,9 +46,9 @@ def get_time_varying_p0(t):
 """
 def get_time_varying_p0(t):
     return 1
+"""
 
-
-
+"""
 def get_time_varying_prob( t):
     return 0.5
 """
@@ -60,4 +60,4 @@ def get_time_varying_prob(t):
                    0.91872146, 0.91598174, 0.86037544, 0.80375444, 0.80892948, 0.77148656,
                    0.72683917, 0.57138508, 0.42049721, 0.28533739, 0.20943683, 0.12897007]
     return prob_values[hour_of_day]
-"""
+
