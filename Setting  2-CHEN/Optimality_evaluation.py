@@ -5,7 +5,7 @@ from gurobipy import GRB
 # 从你的文件导入必要的环境参数和仿真函数
 from parameter_setting_CHEN106 import MAX_CHARGE, S_SPACE, A_SPACE, period, max_r, max_l, T
 # 导入你上面写的真实仿真函数
-from Performance_Evaluation_CHEN import generate_arrival_sequence_poi, run_experiments
+from Performance_Evaluation_CHEN import generate_arrival_sequence_poi, run_experiments, f, delta_f
 from r_beta import precompute_matrices
 # 导入我们之前写的 LP 预计算和求解函数 (假设存在 r_beta.py 中)
 
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     penalty_weight = 0.6
 
     # 2. 加载你之前算好的 Index 表 (请确保路径和名字对应)
-    file_name = f"index_varying ePrice_penal={penalty_weight}_chen({max_r},{max_l}).npy"
+    file_name = f"index_cache_T24_penal{penalty_weight}.npy"
     print(f"Loading index file: {file_name}")
     INDEX_TABLE = np.load(file_name)
 
