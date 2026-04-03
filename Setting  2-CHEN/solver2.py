@@ -5,7 +5,7 @@ import concurrent.futures
 
 # 导入你所有的参数设定
 from parameter_setting_CHEN106 import *  # ==========================================================
-penalty_weight=0.2
+penalty_weight=0.4
 
 # 第一部分：基础 MDP 逻辑 (全局函数，方便多核调用)
 # ==========================================================
@@ -68,7 +68,7 @@ class TimeVaryingWhittleSolver:
     def __init__(self, penalty_weight, T_period):
         self.penalty_weight = penalty_weight
         self.T = T_period
-        self.filename = f"index_cache_T{self.T}_penal{self.penalty_weight}.npy"
+        self.filename = f"index_cache_T{self.T}_penal{self.penalty_weight}test_varying.npy"
         self.index_table = None
 
         # --- 矩阵预分配 ---

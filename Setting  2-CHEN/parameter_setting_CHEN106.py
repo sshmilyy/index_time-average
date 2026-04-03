@@ -31,7 +31,7 @@ S_TO_IDX = {s: i for i, s in enumerate(S_SPACE)}
 NUM_STATES = len(S_SPACE)
 A_SPACE = list(range(int(MAX_CHARGE) + 1))
 
-
+"""
 def get_time_varying_p0(t):
     hour = t % 24
     # 设定价格相对值
@@ -43,7 +43,7 @@ def get_time_varying_p0(t):
         return p_peak
     else:
         return p_off
-"""
+
 def get_time_varying_p0(t):
     return 1
 """
@@ -51,7 +51,30 @@ def get_time_varying_p0(t):
 """
 def get_time_varying_prob( t):
     return 0.5
+
+def get_time_varying_p0(t):
+    hour = t % 24
+
+    return hour*0.1+0.5
 """
+def get_time_varying_p0(t):
+    # 处理初始特殊值
+    if t == 0:
+        return 3.0
+    if t == 1:
+        return 0.5
+
+    # 判断奇偶性
+    if t % 2 == 0:
+        # 偶数情况：从 t=0 (值为3) 开始，每2小时减 0.1
+        # 计算距离 t=0 过了多少个“2小时”
+        steps = t / 2
+        return 3.0 - (steps * 0.1)
+    else:
+        # 奇数情况：从 t=1 (值为0.5) 开始，每2小时加 0.1
+        # 计算距离 t=1 过了多少个“2小时”
+        steps = (t - 1) / 2
+        return 0.5 + (steps * 0.1)
 
 def get_time_varying_prob(t):
     hour_of_day = t % 24

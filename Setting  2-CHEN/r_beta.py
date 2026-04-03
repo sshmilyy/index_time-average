@@ -4,7 +4,7 @@ from gurobipy import GRB
 import time
 
 # 从你的参数文件导入依赖
-from parameter_setting_CHEN106 import MAX_CHARGE, S_SPACE, A_SPACE, period, NUM_STATES, max_r, max_l, \
+from parameter_setting_CHEN106 import  S_SPACE, A_SPACE, period, max_r, max_l, \
     get_time_varying_p0, alpha, S_TO_IDX, get_time_varying_prob, r_dist, l_dist, r_p, l_p
 
 penalty_weight = 0.6
@@ -41,13 +41,10 @@ def precompute_matrices(T, S_space, A_space):
             for a_idx, a in enumerate(A_space):
                 R_mat[t, s_idx, a_idx] = reward_function(s, a, t)
                 R_val, L_val = s
-                if L_val > 0:
-                    if L_val == 1:
-                        next_s = (0, 0)
-                    else:
-                        next_R = max(R_val - a, 0)
-                        next_L = L_val - 1
-                        next_s = (next_R, next_L)
+                if L_val > 1:
+                    next_R = max(R_val - a, 0)
+                    next_L = L_val - 1
+                    next_s = (next_R, next_L)
                     if next_s in S_TO_IDX:
                         next_idx = S_TO_IDX[next_s]
                         P_mat[t, a_idx, s_idx, next_idx] = 1.0
