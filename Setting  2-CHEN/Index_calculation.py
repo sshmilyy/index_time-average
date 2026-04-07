@@ -5,6 +5,8 @@ import concurrent.futures
 
 # 1. 纯净导入基础物理常量
 import parameter_setting_CHEN106_1 as ps
+
+
 # ==========================================================
 # 核心求解器 Class (完美融合 Env 架构 + Numpy 矩阵极速版)
 # ==========================================================
@@ -15,7 +17,7 @@ class WhittleSolver:
         self.env = env
 
         # 动态生成缓存文件名，确保测不同参数时绝对不会互相覆盖
-        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}.npy"
+        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1605.npy"
         self.index_table = None
 
         # --- 矩阵预分配 ---
@@ -222,13 +224,14 @@ if __name__ == "__main__":
     from charging_env import ChargingEnv
 
     # 1. 创建你的统一规则对象，传入测试参数
-    test_env = ChargingEnv(N=10, power_ratio=0.5, penalty_weight=0.8)
+    for penalty_weight in [0.2, 0.4, 0.6, 0.8]:
+        test_env = ChargingEnv(N=10, power_ratio=0.5, penalty_weight=penalty_weight)
 
-    # 2. 将环境丢给求解器
-    solver = WhittleSolver(test_env)
+        # 2. 将环境丢给求解器
+        solver = WhittleSolver(test_env)
 
-    # 3. 极速求解或加载
-    table = solver.get_index_table()
+        # 3. 极速求解或加载
+        table = solver.get_index_table()
 
-    # 4. 打印检查 (T=1, 剩余时间 L=2)
-    solver.display_index(target_l=2, target_t=1)
+        # 4. 打印检查 (T=1, 剩余时间 L=2)
+        solver.display_index(target_l=2, target_t=1)

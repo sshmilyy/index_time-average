@@ -25,9 +25,8 @@ S_TO_IDX = {s: i for i, s in enumerate(S_SPACE)}
 NUM_STATES = len(S_SPACE)
 A_SPACE = list(range(int(MAX_CHARGE) + 1))
 
-# --- E. 时间变动函数 ---
 
-"""
+# --- E. 时间变动函数 ---
 def get_time_varying_p0(t):
     hour = t % 24
     # 设定价格相对值
@@ -40,19 +39,10 @@ def get_time_varying_p0(t):
     else:
         return p_off
 
-def get_time_varying_p0(t):
-    return 1
-"""
 
 """
-def get_time_varying_prob( t):
-    return 0.5
 
-def get_time_varying_p0(t):
-    hour = t % 24
 
-    return hour*0.1+0.5
-"""
 def get_time_varying_p0(t):
     # 处理初始特殊值
     if t == 0:
@@ -71,6 +61,33 @@ def get_time_varying_p0(t):
         # 计算距离 t=1 过了多少个“2小时”
         steps = (t - 1) / 2
         return 0.5 + (steps * 0.1)
+
+def get_time_varying_p0(t):
+    hour = t % 24
+    # 设定价格相对值
+    p_peak = 1.6  # 高峰期成本权重
+    p_off = 0.5  # 低谷期成本权重 (约为高峰的30%)
+
+    # 下午 12:00 到 18:00 是高峰 (Chen et al. Setting)
+    if 12 <= hour < 18:
+        return p_peak
+    else:
+        return p_off
+
+def get_time_varying_p0(t):
+    return 1
+
+def get_time_varying_p0(t):
+    hour = t % 24
+
+    return hour*0.1+0.5
+"""
+
+"""
+def get_time_varying_prob( t):
+    return 0.5
+"""
+
 
 def get_time_varying_prob(t):
     hour_of_day = t % 24

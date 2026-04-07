@@ -13,7 +13,7 @@ class ChargingEnv:
 
         # 2. 自动计算功率限制
         self.total_power = round(self.N * (ps.max_r / ps.max_l) * self.power_ratio)
-        self.avg_power = self.total_power / self.N
+        self.avg_power = round((ps.max_r / ps.max_l) * self.power_ratio)
 
     # 3. 统一的惩罚与收益逻辑
     def penalty_func(self, x):

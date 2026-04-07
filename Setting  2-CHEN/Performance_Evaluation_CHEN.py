@@ -51,11 +51,6 @@ def get_time_varying_prob(t):
     return max(0.0, min(1.0, prob))
 
 """
-def f(x):
-    return (x ** 2) * penalty_weight
-
-def delta_f(x):
-    return f(x) - f(x - 1)
 
 
 def generate_arrival_sequence_poi():
@@ -85,7 +80,7 @@ def generate_arrival_sequence_poi():
         arrivals.append(arrivals_at_t)
     return arrivals
 
-print(generate_arrival_sequence_poi())
+
 # ==========================================
 def transition_probability_simu(current_state, action, current_t, arrival_seq):
 
@@ -277,18 +272,40 @@ def cvt_cts_policy(arrival_seq,eval_window=100):
     dict1, dict2 = process_sequence(arrival_seq)
     r = {(n + 1, t + 1): v for (t, n), v in dict1.items()}
     l = {(n + 1, t + 1): v for (t, n), v in dict2.items()}
+
+    # 辅助变量 β[n,t]
     gamma = {(n, t): penalty_weight for n in range(1, N + 1) for t in range(1, T + 1)}
+
+    # 初始化模型
     model = gp.Model()
+
+    # 决策变量：w[n,t] ∈ [0, w_0] ∩ ℕ
     w = model.addVars(range(1, N + 1), range(1, T + 1), vtype=GRB.CONTINUOUS, lb=0, ub=MAX_CHARGE, name="w")
+
+    # 目标函数
+    # 构建目标函数表达式
     obj = gp.LinExpr()
 
     for t in range(1, T + 1):
+        # 获取模拟环境同款的实时电价 (注意 t-1 对应 python 的 0-index)
         current_p = get_time_varying_p0(t - 1)
         for n in range(1, N + 1):
+            # 1. 收益项：基于当前时刻 t 结算
             obj += (alpha - current_p) * w[n, t]
+
+            # 2. 惩罚项：基于离开时刻结算
+            # 只有当该 (n, t) 确实有车到达时才计算
             if r.get((n, t), 0) > 0:
-                penalty = gamma[n, t] * (r[n, t] - gp.quicksum(w[n, s] for s in range(t, min(t + l[n, t], T + 1)))) ** 2
+                duration = l[(n, t)]
+                arrival_idx = t - 1
+                # 修正：折现因子使用离开时间 (departure_idx)
+                # 惩罚项 = gamma * (R - sum(w))^2
+                penalty = gamma[n, t] * (r[n, t] - gp.quicksum(
+                    w[n, s] for s in range(t, min(t + l[n, t], T + 1))
+                )) ** 2
+
                 obj -=penalty
+
     model.setObjective(obj, GRB.MAXIMIZE)
 
     # 约束 (4): ∑_n w[n,t] ≤ W
@@ -298,10 +315,13 @@ def cvt_cts_policy(arrival_seq,eval_window=100):
     # 约束 (5): r[n,t] - ∑_{s=t}^{t+l[n,t]-1} w[n,s] ≥ 0
     for n in range(1, N + 1):
         for t in range(1, T + 1):
+            # 只有当该时刻确实有车到达(且有需求)时，才添加总充电量约束
             if r.get((n, t), 0) > 0:
                 arrival_time = t
                 duration = l[(n, t)]
+                # 离开时间计算 (注意边界不要超 T)
                 end_time = min(arrival_time + duration, T + 1)
+
                 model.addConstr(
                     r[n, t] - gp.quicksum(w[n, s] for s in range(arrival_time, end_time)) >= 0,
                     name=f"c5_{n}_{t}"
@@ -324,7 +344,8 @@ def cvt_cts_policy(arrival_seq,eval_window=100):
             # 计算惩罚项
             if r.get((n, t), 0) > 0:
                 duration = l[(n, t)]
-                penalty = gamma[n, t] * (r[n, t] - sum(sol[n, s] for s in range(t, min(t + duration, T + 1))
+                penalty = gamma[n, t] * (r[n, t] - sum(
+                    sol[n, s] for s in range(t, min(t + duration, T + 1))
                 )) ** 2
                 steady_reward -= penalty
 
@@ -610,7 +631,7 @@ if __name__ == "__main__":
 
     for penalty_weight in [0.2,0.4,0.6,0.8]:
 
-        file_name =f"index_cache_T24_penal{penalty_weight}.npy"
+        file_name =f"index_Poisson_Fast_penal={penalty_weight}_chen({max_r},{max_l}).npy"
         print(f"Loading index file: {file_name}")
         INDEX_TABLE = np.load(file_name)
         for power_ratio in [0.2,0.4,0.6,0.8,1.0,1.2,1.5,1.7,2.0]:
@@ -618,7 +639,8 @@ if __name__ == "__main__":
             avg_r = sum(r_dist) / len(r_dist)
             total_power = round(N * max_r / max_l * power_ratio)  # 总可用充电功率
 
-
+            f = lambda x: (x ** 2) * penalty_weight
+            delta_f = lambda x: f(x) - f(x - 1)
             print(
                 f"power_ratio={power_ratio}, penalty_weight = {penalty_weight}, total_power = {total_power}\n")
             flat_state = tuple([0, 0] * N)

@@ -347,7 +347,7 @@ if __name__ == "__main__":
     print("✅ 开始独立测试 Performance_Evaluation 模块 (包含 Index 策略)...")
 
     # 1. 创建一个小型测试环境 (N 和 T 小一点，方便快速跑通)
-    test_env = ChargingEnv(N=10, power_ratio=0.5, penalty_weight=0.8)
+    test_env = ChargingEnv(N=10, power_ratio=0.7, penalty_weight=0.8)
 
     # 2. 生成泊松到达序列
     print("\n1️⃣ 正在生成泊松到达序列...")
@@ -391,7 +391,7 @@ if __name__ == "__main__":
                 eval_window=eval_win
             )
 
-        single_charger_reward = reward / test_N
+        single_charger_reward = reward / test_env.N
         cost_time = time.time() - start_time
         print(f"✔️ 策略 [{alg.upper():<5}] -> 稳态单桩均收益: {single_charger_reward:.4f} (耗时: {cost_time:.3f}s)")
 
@@ -401,10 +401,8 @@ if __name__ == "__main__":
     sol, cvt_total_reward = cvt_cts_policy(arr_seq, test_env, eval_window=eval_win)
 
     if sol is not None:
-        single_cvt_reward = cvt_total_reward / test_N
+        single_cvt_reward = cvt_total_reward / test_env.N
         cost_time = time.time() - start_time
         print(f"✔️ 策略 [CVT  ] -> 稳态单桩均收益: {single_cvt_reward:.4f} (耗时: {cost_time:.3f}s)")
     else:
         print("❌ CVT 求解失败：模型不可行 (Infeasible)！")
-
-    print("\n🎉 全部测试结束！看看 INDEX 是不是逼近了 CVT 的收益上限！")
