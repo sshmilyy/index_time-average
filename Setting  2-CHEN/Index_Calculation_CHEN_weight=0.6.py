@@ -250,7 +250,7 @@ if __name__ == '__main__':
     start_time = time.time()
 
     # 获取包含 actual_A_mat 的矩阵
-    P_mat, R_mat, actions_arr, actual_A_mat = precompute_matrices_stationary(S_SPACE, A_SPACE)
+    P_mat, R_mat, actual_A_mat = precompute_matrices_stationary(S_SPACE, A_SPACE)
     print(f"Matrix precomputation done in {time.time() - start_time:.2f}s")
 
     print(f"Starting optimized Whittle Index calculation for {NUM_STATES * period * int(MAX_CHARGE)} indices...")

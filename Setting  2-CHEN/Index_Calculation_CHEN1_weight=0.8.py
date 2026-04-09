@@ -2,7 +2,7 @@ import numpy as np
 import time
 from tqdm import tqdm
 from numba import njit, prange  # 引入 Numba
-from parameter_setting_CHEN158 import MAX_CHARGE, r_dist, l_dist, r_p, l_p, max_r, max_l, S_TO_IDX, N, T, alpha, S_SPACE, \
+from parameter_setting_CHEN106 import MAX_CHARGE, r_dist, l_dist, r_p, l_p, max_r, max_l, S_TO_IDX, N, T, alpha, S_SPACE, \
     A_SPACE, period, NUM_STATES,  get_time_varying_p0,get_time_varying_prob
 penalty_weight= 0.4
 
@@ -77,7 +77,7 @@ def run_pvi_numba(nu, T, P_mat, R_mat, actions_arr, V_init):
     V_new = np.zeros_like(V)
 
     epsilon = 1e-4
-    max_iter = 2000
+    max_iter = 200
 
     # 预计算 R_tilde: (T, S, A)
     # R_mat[t, s, a] - nu * a

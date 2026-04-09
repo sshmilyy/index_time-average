@@ -10,12 +10,11 @@ if __name__ == "__main__":
     print("🚀 开始运行全面渐进最优性测试 (Optimality Evaluation)")
 
     # 1. 设定测试网格
-    N_list = [10, 50, 100, 300,500,1000]
+    N_list = [10, 50, 100, 300,500, 1000]
     penalty_weights_to_test = [0.8]
-    power_ratios_to_test = [0.7]
+    power_ratios_to_test = [0.6]
 
-    # 设定评估窗口 (T=500, 只取最后 100 期算稳态)
-    EVAL_WINDOW = 100
+    EVAL_WINDOW = 120
     all_results = []
 
     for pw in penalty_weights_to_test:
@@ -25,19 +24,21 @@ if __name__ == "__main__":
                 print(f"⚙️ 当前设定: N={N}, Penalty={pw}, Power_Ratio={pr}")
 
                 # 2. 动态生成环境对象
-                env = ChargingEnv(N=N, power_ratio=pr, penalty_weight=pw, T=500)
+                env = ChargingEnv(N=N, power_ratio=pr, penalty_weight=pw)
 
                 # 3. 求解 LP 理论上限
+                print(f"开始求解LP")
                 P_mat, R_mat = env.precompute_matrices()
                 lp_reward, _, beta_star = solve_single_bandit_relaxation(
                     P_mat, R_mat, env.avg_power)
 
                 # 4. 极简获取 Whittle Index
-                # (不需要 try-except！solver 内部会自动判断是读取还是现算！)
+                print(f"获取index")
                 solver = WhittleSolver(env)
                 INDEX_TABLE = solver.get_index_table()
 
                 # 5. 运行仿真验证
+                print(f"开始仿真")
                 NUM_SIMULATIONS = 50
                 sim_rewards = []
                 for _ in range(NUM_SIMULATIONS):
@@ -63,5 +64,5 @@ if __name__ == "__main__":
 
     # 6. 保存为 CSV 给论文画图用
     df = pd.DataFrame(all_results)
-    df.to_csv("Asymptotic_Optimality_Results_1.csv", index=False)
+    df.to_csv("Asymptotic_Optimality_Results.csv", index=False)
     print("\n🎉 所有实验跑完！结果已存入 Asymptotic_Optimality_Results.csv")

@@ -16,8 +16,10 @@ class WhittleSolver:
         # 1. 接入统一环境
         self.env = env
 
-        # 动态生成缓存文件名，确保测不同参数时绝对不会互相覆盖
-        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1605.npy"
+        # case1:constant, price=1.0,prob=0.5
+        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
+        # case1:time varying
+        #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
         self.index_table = None
 
         # --- 矩阵预分配 ---
@@ -40,7 +42,7 @@ class WhittleSolver:
         return 0
 
     def _get_transitions(self, s, a, t):
-        """内部方法：获取状态转移概率分布"""
+        """内部方法：获取状态转移概率分布, Bernoulli distribution"""
         r, l = s
         prob_arrival = ps.get_time_varying_prob(t)
 
@@ -67,7 +69,6 @@ class WhittleSolver:
                     self.A_mat[t, s_idx, a] = a
 
                     # 2. 缓存基础收益
-                    # 【核心改动】：不再自己算惩罚，而是直接找 env 算基础世界的绝对收益
                     self.R_base[t, s_idx, a] = self.env.reward_func(s, a, t)
 
                     # 3. 填入转移概率矩阵
@@ -224,8 +225,8 @@ if __name__ == "__main__":
     from charging_env import ChargingEnv
 
     # 1. 创建你的统一规则对象，传入测试参数
-    for penalty_weight in [0.2, 0.4, 0.6, 0.8]:
-        test_env = ChargingEnv(N=10, power_ratio=0.5, penalty_weight=penalty_weight)
+    for penalty_weight in [0.2,0.4,0.6,0.8]:
+        test_env = ChargingEnv(N=10, power_ratio=0.6, penalty_weight=penalty_weight)
 
         # 2. 将环境丢给求解器
         solver = WhittleSolver(test_env)

@@ -73,14 +73,42 @@ def solve_single_bandit_relaxation(P_mat, R_mat, avg_power_per_charger):
 # ==========================================
 # 独立测试模块
 # ==========================================
+# ==========================================
+# 独立测试模块：测试 LP 松弛上限与影子价格
+# ==========================================
 if __name__ == "__main__":
+    import time
     from charging_env import ChargingEnv
-    from Index_calculation import WhittleSolver
-    print("✅ 测试: WhittleSolver")
 
-    test_env = ChargingEnv(N=10, power_ratio=0.4, penalty_weight=0.8, T=50)
-    solver = WhittleSolver(test_env)
+    print("✅ 开始独立测试 r_beta_1.py (单臂拉格朗日松弛 LP求解)...")
 
-    print(f"正在为 T={test_env.T}, Penalty={test_env.penalty_weight} 计算 Index 表...")
-    # table = solver.solve() # 取消注释以运行你的求解代码
-    print("求解器初始化正常，测试完成！")
+    # 1. 设定测试参数
+    test_N = 10
+    test_power_ratio = 0.6
+    test_penalty = 0.8
+    test_T = 960  # 使用标准的 500 步或者周期 24，取决于你的 Env 设置
+
+    env = ChargingEnv(N=test_N, power_ratio=test_power_ratio, penalty_weight=test_penalty, T=test_T)
+
+    # 2. 获取预计算矩阵
+    start_time = time.time()
+    P_mat, R_mat = env.precompute_matrices()
+    start_solve = time.time()
+    lp_reward, actual_power, beta_star = solve_single_bandit_relaxation(
+        P_mat, R_mat, env.avg_power
+    )
+    solve_time = time.time() - start_solve
+
+    # 4. 打印学术风的输出结果
+    print("\n" + "=" * 50)
+    print(f"\n⚙️测试环境：N={test_N}, Power_Ratio={test_power_ratio}, Penalty={test_penalty}")
+    if lp_reward is not None:
+        print(f"🎉 求解成功！(Gurobi 耗时: {solve_time:.3f}s)")
+        print("-" * 50)
+        print(f"🏆 LP 理论稳态上限收益 (Optimal Reward): {lp_reward:.4f}")
+        print(f"⚡ 实际分配的平均功率   (Actual Power)  : {actual_power:.4f} (硬限制为 <= {env.avg_power:.4f})")
+        print(f"🔑 影子价格 / Beta* (Lagrange Mult): {beta_star:.4f}")
+    else:
+        print("❌ 求解失败，Gurobi 返回不可行 (Infeasible)。")
+        print("   -> 请检查参数设置，或者确认预计算矩阵流转概率是否和为 1。")
+    print("=" * 50 + "\n")

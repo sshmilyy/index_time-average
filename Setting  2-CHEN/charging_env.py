@@ -4,7 +4,7 @@ import parameter_setting_CHEN106_1 as ps
 
 
 class ChargingEnv:
-    def __init__(self, N, power_ratio, penalty_weight, T=500):
+    def __init__(self, N, power_ratio, penalty_weight, T=720):
         # 1. 绑定实验参数
         self.N = N
         self.power_ratio = power_ratio
@@ -13,7 +13,7 @@ class ChargingEnv:
 
         # 2. 自动计算功率限制
         self.total_power = round(self.N * (ps.max_r / ps.max_l) * self.power_ratio)
-        self.avg_power = round((ps.max_r / ps.max_l) * self.power_ratio)
+        self.avg_power = self.total_power/ self.N
 
     # 3. 统一的惩罚与收益逻辑
     def penalty_func(self, x):
@@ -50,6 +50,26 @@ class ChargingEnv:
                             P_mat[t, a_idx, s_idx, next_idx] = 1.0
                     else:
                         prob_arrival = ps.get_time_varying_prob(t)
+                        '''
+                        # 核心修改：基于泊松分布计算单桩的到达概率
+                        prob_0_car = np.exp(-prob_arrival)  # 等于 0 辆车的概率 P(k=0)
+                        prob_1_or_more = 1.0 - prob_0_car  # 大于等于 1 辆车的概率 P(k>=1)
+
+                        next_idx_0 = ps.S_TO_IDX[(0, 0)]
+                        # 没有车来的状态转移
+                        P_mat[t, a_idx, s_idx, next_idx_0] += prob_0_car
+
+                        # 有车来的状态转移 (把概率分配给具体的车辆类型)
+                        for r_idx, r_val in enumerate(ps.r_dist):
+                            for l_idx, l_val in enumerate(ps.l_dist):
+                                prob = prob_1_or_more * ps.r_p[r_idx] * ps.l_p[l_idx]
+                                next_s = (r_val, l_val)
+                                if next_s in ps.S_TO_IDX:
+                                    next_idx = ps.S_TO_IDX[next_s]
+                                    P_mat[t, a_idx, s_idx, next_idx] += prob
+
+                        '''
+                        #Bernoulli
                         next_idx_0 = ps.S_TO_IDX[(0, 0)]
                         P_mat[t, a_idx, s_idx, next_idx_0] += (1.0 - prob_arrival)
                         for r_idx, r_val in enumerate(ps.r_dist):
@@ -68,7 +88,7 @@ class ChargingEnv:
 if __name__ == "__main__":
     print("✅ 测试: ChargingEnv 环境类")
     # 创建一个测试环境
-    test_env = ChargingEnv(N=10, power_ratio=0.5, penalty_weight=0.8, T=10)
+    test_env = ChargingEnv(N=10, power_ratio=0.6, penalty_weight=0.8, T=10)
     print(f"总功率限制: {test_env.total_power}, 单桩平均限制: {test_env.avg_power}")
 
     s_test = (5, 1)  # 需要5度电，还剩1个时刻

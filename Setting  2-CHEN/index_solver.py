@@ -4,7 +4,7 @@ import time
 import concurrent.futures
 
 # 导入你所有的参数设定
-from parameter_setting_CHEN106 import *  # ==========================================================
+from parameter_setting_CHEN106_1 import *  # ==========================================================
 penalty_weight=0.8
 
 # 第一部分：基础 MDP 逻辑 (全局函数，方便多核调用)
@@ -122,7 +122,7 @@ class TimeVaryingWhittleSolver:
         low, high = -10.0, 20.0
         epsilon = 1e-7
 
-        for _ in range(80):
+        for _ in range(20):
             mid = (low + high) / 2
             h = self._solve_rvi(mid)
 
@@ -216,7 +216,7 @@ class TimeVaryingWhittleSolver:
 # ==========================================================
 if __name__ == "__main__":
     # 这里的 T_period 取决于你在 parameter_setting_CHEN106 中的 period
-    T_period = 1  # 假设你在 parameter_setting 里面定义了 period (比如 24)
+    T_period = period  # 假设你在 parameter_setting 里面定义了 period (比如 24)
 
     # 1. 实例化求解器，测试惩罚权重为 0.8 的情况
     solver = TimeVaryingWhittleSolver(penalty_weight=0.8, T_period=T_period)
@@ -226,4 +226,4 @@ if __name__ == "__main__":
 
     # 3. 打印检查某个特定时间、特定截止时间下的 Index 变化
     # 例如：检查 T=12, 剩余时间 L=3, 动作 a=0 时，Index 随需求 R 的变化
-    solver.check_index_values(target_l=2, target_t=0, action=0)
+    solver.check_index_values(target_l=3, target_t=12, action=0)

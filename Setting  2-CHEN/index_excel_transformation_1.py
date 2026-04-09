@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 # 1. 读取降维后的 2D .npy 文件
-file_path = 'index_Stationary_Theoretical_penal=0.8_chen(10,6).npy'
+file_path = 'index_varying ePrice_penal=0.4_chen(10,6).npy'
 data = np.load(file_path)
 
 # 打印一下维度确认，应该是类似 (67, 3) 的二维形状

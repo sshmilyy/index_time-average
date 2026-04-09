@@ -5,7 +5,7 @@ from pandas import DataFrame
 from scipy.stats import t
 import matplotlib.pyplot as plt
 from parameter_setting_CHEN106 import MAX_CHARGE, r_dist, l_dist, r_p, l_p, max_r, max_l, S_TO_IDX, N, T, alpha,get_time_varying_prob,get_time_varying_p0,period
-
+from index_solver import TimeVaryingWhittleSolver
 # ==========================================
 # 1. Chen et al. (2024) Simulation Settings
 # Based on "My Electric Avenue" (Residential/Public)
@@ -630,7 +630,8 @@ if __name__ == "__main__":
     charger_states = []
 
     for penalty_weight in [0.2,0.4,0.6,0.8]:
-
+        print(f"\n=== 开始评估 Penalty = {penalty_weight} ===")
+        solver = TimeVaryingWhittleSolver(penalty_weight, period)
         file_name =f"index_Poisson_Fast_penal={penalty_weight}_chen({max_r},{max_l}).npy"
         print(f"Loading index file: {file_name}")
         INDEX_TABLE = np.load(file_name)

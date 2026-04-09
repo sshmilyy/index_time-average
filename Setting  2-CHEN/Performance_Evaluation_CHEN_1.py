@@ -14,8 +14,28 @@ def f(x, env):
     return (x ** 2) * env.penalty_weight
 
 
+# Performance_Evaluation_CHEN_1.py
+
 def generate_arrival_sequence_poi(env):
-    """生成泊松到达序列 (接入 env)"""
+    #Bernoulli
+    arrivals = []
+    for t in range(env.T):
+        prob = ps.get_time_varying_prob(t)
+        arrivals_at_t = []
+
+        for _ in range(env.N):
+            # np.random.rand() 生成 0~1 的随机数，小于 prob 代表有车来
+            if np.random.rand() < prob:
+                r = np.random.choice(ps.r_dist, p=ps.r_p)
+                l = np.random.choice(ps.l_dist, p=ps.l_p)
+                arrivals_at_t.append((r, l))
+            else:
+                arrivals_at_t.append(None)  # 这个桩当前时刻没有车来
+        arrivals.append(arrivals_at_t)
+    return arrivals
+'''
+def generate_arrival_sequence_poi(env):
+    #Poisson (接入 env)
     arrivals = []
     for t in range(env.T):
         prob = ps.get_time_varying_prob(t)
@@ -29,8 +49,9 @@ def generate_arrival_sequence_poi(env):
             arrivals_at_t.append((r, l))
         arrivals.append(arrivals_at_t)
     return arrivals
+'''
 
-
+'''
 def transition_probability_simu(current_state, action, current_t, arrival_seq, env):
     """状态转移 (接入 env)"""
     if len(current_state) != 2 * env.N:
@@ -66,6 +87,45 @@ def transition_probability_simu(current_state, action, current_t, arrival_seq, e
 
     return tuple(new_state)
 
+'''
+
+def transition_probability_simu(current_state, action, current_t, arrival_seq, env):
+    """
+    【最终修正版】：严格匹配独立臂 MDP 的状态转移矩阵
+    """
+    if len(current_state) != 2 * env.N:
+        raise ValueError("The length of the state vector does not match.")
+    new_state = list(current_state)
+
+    # --- Step 1: 处理现有车辆的充电与时长衰减 ---
+    for i in range(env.N):
+        r_idx = 2 * i
+        l_idx = 2 * i + 1
+
+        if new_state[r_idx] < action[i]:
+            raise ValueError(f"Action {action[i]} exceeds remaining charge.")
+
+        if new_state[l_idx] > 0:
+            new_state[r_idx] = max(new_state[r_idx] - action[i], 0)
+            new_state[l_idx] = max(new_state[l_idx] - 1, 0)
+
+    # --- Step 2: 处理新车到达 (完全解耦) ---
+    arriving_cars_at_t = arrival_seq[current_t]
+
+    for i in range(env.N):
+        r_idx = 2 * i
+        l_idx = 2 * i + 1
+
+        # 只有当该充电桩本身完全空闲 (L=0) 时，才能检查专属它的车是否来了
+        if new_state[l_idx] == 0:
+            car = arriving_cars_at_t[i]  # 取出它的专属到达情况
+            if car is not None:
+                new_state[r_idx] = car[0]
+                new_state[l_idx] = car[1]
+            else:
+                new_state[r_idx] = 0  # 没有车来，确保清空旧的 R，回归纯净的 (0,0) 状态
+
+    return tuple(new_state)
 
 def reward_function(current_state, action, t, env):
     """奖励函数 (接入 env)"""
@@ -250,7 +310,11 @@ def process_sequence(arrival_seq, env):
         for n in range(env.N):
             is_slot_free = (t >= slot_free_time[n])
             if is_slot_free and arrival_idx < len(arrivals_at_t):
-                r_val, l_val = arrivals_at_t[arrival_idx]
+                '''r_val, l_val = arrivals_at_t[arrival_idx]'''
+                car = arrivals_at_t[arrival_idx]
+                if car is None:
+                    continue  # 如果这个桩没有车来，直接跳过，处理下一个
+                r_val, l_val = car
                 dict_r[(t, n)] = r_val
                 dict_l[(t, n)] = l_val
                 if l_val > 0:
@@ -343,17 +407,18 @@ if __name__ == "__main__":
     from charging_env import ChargingEnv
     from Index_calculation import WhittleSolver  # 引入你的求解器
     import time
+    from r_beta_1 import solve_single_bandit_relaxation
 
     print("✅ 开始独立测试 Performance_Evaluation 模块 (包含 Index 策略)...")
 
     # 1. 创建一个小型测试环境 (N 和 T 小一点，方便快速跑通)
-    test_env = ChargingEnv(N=10, power_ratio=0.7, penalty_weight=0.8)
+    test_env = ChargingEnv(N=10, power_ratio=0.6, penalty_weight=0.8)
 
     # 2. 生成泊松到达序列
-    print("\n1️⃣ 正在生成泊松到达序列...")
+    print("\n1️⃣ 正在生成到达序列...")
     arr_seq = generate_arrival_sequence_poi(test_env)
     init_s = tuple([0, 0] * test_env.N)
-    eval_win = 50
+    eval_win = 96
 
     # ================= 关键新增 =================
     # 3. 准备 Whittle Index 表
@@ -396,7 +461,6 @@ if __name__ == "__main__":
         print(f"✔️ 策略 [{alg.upper():<5}] -> 稳态单桩均收益: {single_charger_reward:.4f} (耗时: {cost_time:.3f}s)")
 
     # 5. 测试全知全能的 CVT (Gurobi)
-    print("\n4️⃣ 正在测试 CVT (Gurobi 全知全能离线上界)...")
     start_time = time.time()
     sol, cvt_total_reward = cvt_cts_policy(arr_seq, test_env, eval_window=eval_win)
 
@@ -406,3 +470,16 @@ if __name__ == "__main__":
         print(f"✔️ 策略 [CVT  ] -> 稳态单桩均收益: {single_cvt_reward:.4f} (耗时: {cost_time:.3f}s)")
     else:
         print("❌ CVT 求解失败：模型不可行 (Infeasible)！")
+
+
+    P_mat, R_mat = test_env.precompute_matrices()
+    start_solve = time.time()
+    lp_reward, actual_power, beta_star = solve_single_bandit_relaxation(
+        P_mat, R_mat, test_env.avg_power
+    )
+    if lp_reward is not None:
+        print("-" * 50)
+        print(f"🏆 Optimal Reward: {lp_reward:.4f}")
+    else:
+        print("❌Gurobi Infeasible)。")
+    print("=" * 50 + "\n")
