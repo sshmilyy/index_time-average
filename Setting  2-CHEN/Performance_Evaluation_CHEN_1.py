@@ -138,7 +138,7 @@ def reward_function(current_state, action, t, env):
 
 
 # ==========================================
-# 各类策略分配逻辑 (核心算法 100% 保持不变)
+# 各类Policy分配逻辑 (核心算法 100% 保持不变)
 # ==========================================
 
 # 1. NEW Policy
@@ -409,35 +409,40 @@ if __name__ == "__main__":
     import time
     from r_beta_1 import solve_single_bandit_relaxation
 
-    print("✅ 开始独立测试 Performance_Evaluation 模块 (包含 Index 策略)...")
+    print("✅ Testing Performance_Evaluation ...")
 
     # 1. 创建一个小型测试环境 (N 和 T 小一点，方便快速跑通)
-    test_env = ChargingEnv(N=10, power_ratio=0.6, penalty_weight=0.8)
+    test_env = ChargingEnv(N=20, power_ratio=0.6, penalty_weight=0.8)
+    test_env1 = ChargingEnv(N=20, power_ratio=0.6, penalty_weight=0.8,T=24)
 
     # 2. 生成泊松到达序列
-    print("\n1️⃣ 正在生成到达序列...")
+    print("\n1️⃣ arrival process...")
     arr_seq = generate_arrival_sequence_poi(test_env)
     init_s = tuple([0, 0] * test_env.N)
     eval_win = 96
 
     # ================= 关键新增 =================
     # 3. 准备 Whittle Index 表
-    print("\n2️⃣ 正在准备 Whittle Index 策略的离线索引表...")
+    print("\n2️⃣ preparing for  Whittle Index Policy Form...")
     solver = WhittleSolver(test_env)
     # 这里会自动去读取缓存，如果没有缓存就会重新计算
     INDEX_TABLE = solver.get_index_table()
-    print("✔️ Index 表准备完毕！")
+    print("✔️ Index Form Done！")
     # ============================================
 
-    # 4. 循环测试所有策略 (现在把 'index' 加进来了！)
-    print("\n3️⃣ 正在测试各种调度策略...")
+    # 4. Test all the Policy
+    print("\n3️⃣ Testing All the Policy...")
+    # 5. Test CVT (Gurobi)
+    start_time = time.time()
+    sol, cvt_total_reward = cvt_cts_policy(arr_seq, test_env, eval_window=eval_win)
+    print("=" * 50)
     # 把 'index' 放在列表最后作为压轴
-    algorithms_to_test = ['gdy', 'llf', 'lrf', 'new', 'index']
+    algorithms_to_test = ['llf', 'new', 'lrf', 'gdy',  'index']
 
     for alg in algorithms_to_test:
         start_time = time.time()
 
-        # 如果是 index 策略，必须把算好的 INDEX_TABLE 传进去
+        # 如果是 index Policy，必须把算好的 INDEX_TABLE 传进去
         if alg == 'index':
             reward, _, _, _ = run_experiments(
                 algorithm=alg,
@@ -458,28 +463,27 @@ if __name__ == "__main__":
 
         single_charger_reward = reward / test_env.N
         cost_time = time.time() - start_time
-        print(f"✔️ 策略 [{alg.upper():<5}] -> 稳态单桩均收益: {single_charger_reward:.4f} (耗时: {cost_time:.3f}s)")
-
-    # 5. 测试全知全能的 CVT (Gurobi)
-    start_time = time.time()
-    sol, cvt_total_reward = cvt_cts_policy(arr_seq, test_env, eval_window=eval_win)
-
-    if sol is not None:
-        single_cvt_reward = cvt_total_reward / test_env.N
-        cost_time = time.time() - start_time
-        print(f"✔️ 策略 [CVT  ] -> 稳态单桩均收益: {single_cvt_reward:.4f} (耗时: {cost_time:.3f}s)")
-    else:
-        print("❌ CVT 求解失败：模型不可行 (Infeasible)！")
-
-
-    P_mat, R_mat = test_env.precompute_matrices()
-    start_solve = time.time()
+        print(f"✔️ Policy [{alg.upper():<5}] -> Average reward: {single_charger_reward:.4f} ( {cost_time:.3f}s)")
+    #LP bound
+    strat_time=time. time()
+    P_mat, R_mat = test_env1.precompute_matrices()
     lp_reward, actual_power, beta_star = solve_single_bandit_relaxation(
         P_mat, R_mat, test_env.avg_power
     )
+    cost_time = time.time() - strat_time
+
     if lp_reward is not None:
-        print("-" * 50)
-        print(f"🏆 Optimal Reward: {lp_reward:.4f}")
+        print(f"✔️ Policy [LP   ] -> Average reward: {lp_reward:.4f} ( {cost_time:.3f}s)")
     else:
-        print("❌Gurobi Infeasible)。")
+        print("❌Gurobi Infeasible。")
+
+    #print CVT result
+    if sol is not None:
+        single_cvt_reward = cvt_total_reward / test_env.N
+        cost_time = time.time() - start_time
+        print(f"✔️ Policy [CVT  ] -> Average reward: {single_cvt_reward:.4f} ( {cost_time:.3f}s)")
+    else:
+        print("❌ CVT  Infeasible！")
+
+
     print("=" * 50 + "\n")

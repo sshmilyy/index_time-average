@@ -4,7 +4,7 @@ import parameter_setting_CHEN106_1 as ps
 
 
 class ChargingEnv:
-    def __init__(self, N, power_ratio, penalty_weight, T=720):
+    def __init__(self, N, power_ratio, penalty_weight, T=480):
         # 1. 绑定实验参数
         self.N = N
         self.power_ratio = power_ratio
@@ -14,7 +14,6 @@ class ChargingEnv:
         # 2. 自动计算功率限制
         self.total_power = round(self.N * (ps.max_r / ps.max_l) * self.power_ratio)
         self.avg_power = self.total_power/ self.N
-
     # 3. 统一的惩罚与收益逻辑
     def penalty_func(self, x):
         return self.penalty_weight * (max(0, x) ** 2)

@@ -61,7 +61,7 @@ class WhittleSolver:
 
     def _precompute_matrices(self):
         """构建加速计算的大矩阵"""
-        print(f"初始化 Solver (Penalty={self.env.penalty_weight}): 正在构建底层 Numpy 加速矩阵...")
+        print(f"Initialize Solver (Penalty={self.env.penalty_weight}):  Numpy Matrix...")
         for t in range(ps.period):
             for s_idx, s in enumerate(ps.S_SPACE):
                 for a in range(ps.MAX_CHARGE + 1):
@@ -80,7 +80,7 @@ class WhittleSolver:
                             ns_idx = ps.S_TO_IDX[ns]
                             self.P_mat[t, s_idx, a, ns_idx] = p
 
-        print("巨型矩阵构建完成！即将开始光速计算...")
+        print("Precompute Matrix Done...")
 
     def _solve_rvi(self, nu, h_init=None):
         """相对价值迭代 (完全矩阵化)"""
@@ -145,7 +145,7 @@ class WhittleSolver:
 
     def _calculate_all(self):
         """执行全量计算并带有进度条"""
-        print(f"未找到缓存 {self.filename}，准备执行计算...")
+        print(f"no {self.filename}，preparing calculation index form...")
         start_time = time.time()
         table = np.zeros((ps.NUM_STATES, ps.period, ps.MAX_CHARGE))
 
@@ -159,7 +159,7 @@ class WhittleSolver:
 
         total_tasks = len(tasks)
         num_cores = os.cpu_count()
-        print(f"总任务数: {total_tasks}。启动 {num_cores} 核并行加速...")
+        print(f"Total tasks: {total_tasks}。 {num_cores} CPU boosting...")
 
         completed = 0
         with concurrent.futures.ProcessPoolExecutor(max_workers=num_cores) as executor:
@@ -170,20 +170,20 @@ class WhittleSolver:
                 table[s_idx, t, k] = val
                 completed += 1
                 if completed % 500 == 0:
-                    print(f"计算进度: {completed} / {total_tasks} ({(completed / total_tasks) * 100:.1f}%)")
+                    print(f"Process: {completed} / {total_tasks} ({(completed / total_tasks) * 100:.1f}%)")
 
-        print(f"全量计算完成！总耗时: {time.time() - start_time:.2f} 秒")
+        print(f"Done！Total cost: {time.time() - start_time:.2f} s")
         return table
 
     def get_index_table(self, force_recompute=False):
         """对外接口：智能获取 Index 表"""
         if not force_recompute and os.path.exists(self.filename):
-            print(f"✅ 找到缓存文件 {self.filename}，直接闪电加载！")
+            print(f"✅  {self.filename} Loading！")
             self.index_table = np.load(self.filename)
         else:
             self.index_table = self._calculate_all()
             np.save(self.filename, self.index_table)
-            print(f"💾 计算结果已永久缓存至 {self.filename}")
+            print(f"💾 Result saved in {self.filename}")
         return self.index_table
 
     def display_index(self, target_l, target_t):
@@ -192,7 +192,7 @@ class WhittleSolver:
             self.get_index_table()
 
         print(f"\n" + "=" * 65)
-        print(f"📊 Whittle Index 全景矩阵 (剩余时间 L={target_l}, 时刻 t={target_t})")
+        print(f"📊 Whittle Index Matrix (剩余时间 L={target_l}, 时刻 t={target_t})")
         print("=" * 65)
 
         header = f"{'需求(R)':<10}"

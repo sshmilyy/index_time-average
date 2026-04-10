@@ -80,14 +80,13 @@ if __name__ == "__main__":
     import time
     from charging_env import ChargingEnv
 
-    print("✅ 开始独立测试 r_beta_1.py (单臂拉格朗日松弛 LP求解)...")
+    print("✅ Testing r_beta_1.py (Single arm bandit relaxed LP)...")
 
     # 1. 设定测试参数
     test_N = 10
     test_power_ratio = 0.6
     test_penalty = 0.8
-    test_T = 960  # 使用标准的 500 步或者周期 24，取决于你的 Env 设置
-
+    test_T = 24
     env = ChargingEnv(N=test_N, power_ratio=test_power_ratio, penalty_weight=test_penalty, T=test_T)
 
     # 2. 获取预计算矩阵

@@ -7,7 +7,7 @@ from Index_calculation import WhittleSolver
 from Performance_Evaluation_CHEN_1 import generate_arrival_sequence_poi, run_experiments
 
 if __name__ == "__main__":
-    print("🚀 开始运行全面渐进最优性测试 (Optimality Evaluation)")
+    print("🚀  Optimality Evaluation")
 
     # 1. 设定测试网格
     N_list = [10, 50, 100, 300,500, 1000]
@@ -21,24 +21,23 @@ if __name__ == "__main__":
         for pr in power_ratios_to_test:
             for N in N_list:
                 print(f"\n{'=' * 50}")
-                print(f"⚙️ 当前设定: N={N}, Penalty={pw}, Power_Ratio={pr}")
+                print(f"⚙️ Parameter Setting: N={N}, Penalty={pw}, Power_Ratio={pr}")
 
                 # 2. 动态生成环境对象
                 env = ChargingEnv(N=N, power_ratio=pr, penalty_weight=pw)
 
                 # 3. 求解 LP 理论上限
-                print(f"开始求解LP")
                 P_mat, R_mat = env.precompute_matrices()
                 lp_reward, _, beta_star = solve_single_bandit_relaxation(
                     P_mat, R_mat, env.avg_power)
 
                 # 4. 极简获取 Whittle Index
-                print(f"获取index")
+                print(f" Index Form")
                 solver = WhittleSolver(env)
                 INDEX_TABLE = solver.get_index_table()
 
                 # 5. 运行仿真验证
-                print(f"开始仿真")
+                print(f"Simulation")
                 NUM_SIMULATIONS = 50
                 sim_rewards = []
                 for _ in range(NUM_SIMULATIONS):
@@ -55,7 +54,7 @@ if __name__ == "__main__":
                 mean_sim_reward = np.mean(sim_rewards)
                 gap = abs(lp_reward - mean_sim_reward) / lp_reward * 100 if lp_reward else 0
 
-                print(f"✅ 结果 -> LP Bound: {lp_reward:.4f} | Sim: {mean_sim_reward:.4f} | Gap: {gap:.2f}%")
+                print(f"✅ Result -> LP Bound: {lp_reward:.4f} | Sim: {mean_sim_reward:.4f} | Gap: {gap:.2f}%")
 
                 all_results.append({
                     "N": N, "Penalty": pw, "PowerRatio": pr,
@@ -65,4 +64,4 @@ if __name__ == "__main__":
     # 6. 保存为 CSV 给论文画图用
     df = pd.DataFrame(all_results)
     df.to_csv("Asymptotic_Optimality_Results.csv", index=False)
-    print("\n🎉 所有实验跑完！结果已存入 Asymptotic_Optimality_Results.csv")
+    print("\n🎉 Done！Result saved in the Asymptotic_Optimality_Results.csv")
