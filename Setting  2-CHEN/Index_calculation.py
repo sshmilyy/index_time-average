@@ -17,7 +17,7 @@ class WhittleSolver:
         self.env = env
 
         # case1:constant, price=1.0,prob=0.5
-        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
+        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
         # case1:time varying
         #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
         self.index_table = None
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     from charging_env import ChargingEnv
 
     # 1. 创建你的统一规则对象，传入测试参数
-    for penalty_weight in [0.2,0.4,0.6,0.8]:
+    for penalty_weight in [0.8]:
         test_env = ChargingEnv(N=10, power_ratio=0.6, penalty_weight=penalty_weight)
 
         # 2. 将环境丢给求解器

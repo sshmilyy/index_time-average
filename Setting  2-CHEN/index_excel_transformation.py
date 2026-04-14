@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 
 # 1. 读取你最新的 .npy 文件
-file_path = 'index_cache_T24_penal0.4test_varying.npy'
+file_path = 'index_cache_period=24_pw=0.8_test2_varying_Bernoulli.npy'
 data = np.load(file_path)
 
 # 2. 设置输出的 Excel 文件名
-output_file = 'output_24_tables_penal0.4test_varying.xlsx'
+output_file = 'output_24_tables_penal0.8test2_varying.xlsx'
 
 # 3. 创建 Excel 写入器
 with pd.ExcelWriter(output_file) as writer:
