@@ -298,8 +298,57 @@ def simulate_idx(initial_state, arrival_seq, env, table, eval_window=100):
     avg_reward = sum(step_rewards[-eval_window:]) / eval_window
     return avg_reward, states, actions, step_rewards
 
+# 6. Index_Xu Policy
+def index_Xu_policy(state, env, index_table_Xu, current_t):
+    periodic_t = current_t % ps.period
+    action = [0] * env.N
+    available_power = env.total_power
 
-# 6. Clairvoyant (CVT) Policy
+    # 抽取每个充电桩的 (r, l, i)
+    chargers = [(state[2 * i], state[2 * i + 1], i) for i in range(env.N)]
+    active_chargers = [c for c in chargers if c[1] > 0 and c[0] > 0]
+
+    candidates = []
+    for r, l, idx in active_chargers:
+        s = (r, l)
+        if s in ps.S_TO_IDX:
+            s_idx = ps.S_TO_IDX[s]
+            # 获取对应的二元动作指数
+            idx_val = index_table_Xu[s_idx, periodic_t]
+            candidates.append((idx_val, r, l, idx))
+
+    # 按照 Index 从大到小排序，贪心分配
+    candidates.sort(key=lambda x: x[0], reverse=True)
+
+    for idx_val, r, l, idx in candidates:
+        if available_power <= 0:
+            break
+        # Xu Policy 认为只要被激活，就给最高功率，或者给满足需求的最高功率
+        alloc = min(r, ps.MAX_CHARGE, available_power)
+        action[idx] = alloc
+        available_power -= alloc
+
+    return tuple(action)
+
+
+def simulate_idx_Xu(initial_state, arrival_seq, env, index_table_Xu, eval_window=100):
+    step_rewards, states, actions = [], [initial_state], []
+    current_state = initial_state
+
+    for t in range(env.T):
+        action = index_Xu_policy(current_state, env, index_table_Xu, t)
+        actions.append(action)
+        step_rewards.append(reward_function(current_state, action, t, env))
+        current_state = transition_probability_simu(current_state, action, t, arrival_seq, env)
+        states.append(current_state)
+
+    eval_window = min(eval_window, env.T)
+    avg_reward = sum(step_rewards[-eval_window:]) / eval_window
+    return avg_reward, states, actions, step_rewards
+
+
+
+# 7. Clairvoyant (CVT) Policy
 def process_sequence(arrival_seq, env):
     T_len = len(arrival_seq)
     dict_r, dict_l = {}, {}
@@ -387,6 +436,8 @@ def cvt_cts_policy(arrival_seq, env, eval_window=100):
 def run_experiments(algorithm, arrival_seq, initial, env, table=None, eval_window=100):
     if algorithm == "index":
         return simulate_idx(initial, arrival_seq, env, table, eval_window)
+    elif algorithm == "index_Xu":
+        return simulate_idx_Xu(initial, arrival_seq, env, table, eval_window)
     else:
         simulate_func = {
             'new': simulate_new,
@@ -405,85 +456,112 @@ def run_experiments(algorithm, arrival_seq, initial, env, table=None, eval_windo
 # ==========================================
 if __name__ == "__main__":
     from charging_env import ChargingEnv
-    from Index_calculation import WhittleSolver  # 引入你的求解器
+    from Index_calculation import WhittleSolver, WhittleSolverXu
     import time
     from r_beta_1 import solve_single_bandit_relaxation
-
+    import pandas as pd
     print("✅ Testing Performance_Evaluation ...")
 
-    # 1. 创建一个小型测试环境 (N 和 T 小一点，方便快速跑通)
-    test_env = ChargingEnv(N=20, power_ratio=0.6, penalty_weight=0.8)
-    test_env1 = ChargingEnv(N=20, power_ratio=0.6, penalty_weight=0.8,T=24)
+    # 1. 创建测试环境
+    for penalty_weight in [0.2,0.4,0.6,0.8]:
+        test_env = ChargingEnv(N=20, power_ratio=0.6, penalty_weight=penalty_weight)
+        test_env1 = ChargingEnv(N=20, power_ratio=0.6, penalty_weight=penalty_weight, T=24)
 
-    # 2. 生成泊松到达序列
-    print("\n1️⃣ arrival process...")
-    arr_seq = generate_arrival_sequence_poi(test_env)
-    init_s = tuple([0, 0] * test_env.N)
-    eval_win = 96
+        # 2. 生成泊松到达序列
+        print("\n1️⃣ arrival process...")
+        arr_seq = generate_arrival_sequence_poi(test_env)
+        init_s = tuple([0, 0] * test_env.N)
+        eval_win = 96
 
-    # ================= 关键新增 =================
-    # 3. 准备 Whittle Index 表
-    print("\n2️⃣ preparing for  Whittle Index Policy Form...")
-    solver = WhittleSolver(test_env)
-    # 这里会自动去读取缓存，如果没有缓存就会重新计算
-    INDEX_TABLE = solver.get_index_table()
-    print("✔️ Index Form Done！")
-    # ============================================
+        # 3. 准备 Whittle Index 表
+        print("\n2️⃣ preparing for Whittle Index Policy Form...")
+        solver = WhittleSolver(test_env)
+        INDEX_TABLE = solver.get_index_table()
+        print("✔️ Index Form Done！")
 
-    # 4. Test all the Policy
-    print("\n3️⃣ Testing All the Policy...")
-    # 5. Test CVT (Gurobi)
-    start_time = time.time()
-    sol, cvt_total_reward = cvt_cts_policy(arr_seq, test_env, eval_window=eval_win)
-    print("=" * 50)
-    # 把 'index' 放在列表最后作为压轴
-    algorithms_to_test = ['llf', 'new', 'lrf', 'gdy',  'index']
+        print("\n2️⃣ preparing for Whittle Index_Xu Policy Form...")
+        solver_Xu = WhittleSolverXu(test_env)
+        INDEX_TABLE_XU = solver_Xu.get_index_table_Xu()
+        print("✔️ Index_Xu Form Done！")
 
-    for alg in algorithms_to_test:
+        # 创建结果列表
+        results = []
+
+        # 4. Test all the Policy
+        print("\n3️⃣ Testing All the Policy...")
+
+        # 5. Test CVT (Gurobi)
         start_time = time.time()
+        sol, cvt_total_reward = cvt_cts_policy(arr_seq, test_env, eval_window=eval_win)
+        cvt_time = time.time() - start_time
 
-        # 如果是 index Policy，必须把算好的 INDEX_TABLE 传进去
-        if alg == 'index':
-            reward, _, _, _ = run_experiments(
-                algorithm=alg,
-                arrival_seq=arr_seq,
-                initial=init_s,
-                env=test_env,
-                table=INDEX_TABLE,  # <--- 传表！
-                eval_window=eval_win
-            )
+        print("=" * 50)
+
+
+        # 测试其他策略
+        algorithms_to_test = ['llf', 'new', 'lrf', 'gdy', 'index_Xu', 'index']
+
+        for alg in algorithms_to_test:
+            start_time = time.time()
+
+            if alg == 'index':
+                reward, _, _, _ = run_experiments(
+                    algorithm=alg,
+                    arrival_seq=arr_seq,
+                    initial=init_s,
+                    env=test_env,
+                    table=INDEX_TABLE,
+                    eval_window=eval_win
+                )
+            elif alg == 'index_Xu':
+                reward, _, _, _ = run_experiments(
+                    algorithm=alg,
+                    arrival_seq=arr_seq,
+                    initial=init_s,
+                    env=test_env,
+                    table=INDEX_TABLE_XU,
+                    eval_window=eval_win
+                )
+            else:
+                reward, _, _, _ = run_experiments(
+                    algorithm=alg,
+                    arrival_seq=arr_seq,
+                    initial=init_s,
+                    env=test_env,
+                    eval_window=eval_win
+                )
+
+            single_charger_reward = reward / test_env.N
+            cost_time = time.time() - start_time
+
+            results.append([alg.upper(), single_charger_reward, cost_time])
+            print(f"✔️ Policy [{alg.upper():<9}] -> Average reward: {single_charger_reward:.4f} ( {cost_time:.3f}s)")
+
+        if sol is not None:
+            single_cvt_reward = cvt_total_reward / test_env.N
+            results.append(['CVT', single_cvt_reward, cvt_time])
+            print(f"✔️ Policy [CVT      ] -> Average reward: {single_cvt_reward:.4f} ( {cvt_time:.3f}s)")
         else:
-            reward, _, _, _ = run_experiments(
-                algorithm=alg,
-                arrival_seq=arr_seq,
-                initial=init_s,
-                env=test_env,
-                eval_window=eval_win
-            )
+            results.append(['CVT', 'Infeasible', cvt_time])
+            print("❌ CVT Infeasible！")
 
-        single_charger_reward = reward / test_env.N
-        cost_time = time.time() - start_time
-        print(f"✔️ Policy [{alg.upper():<5}] -> Average reward: {single_charger_reward:.4f} ( {cost_time:.3f}s)")
-    #LP bound
-    strat_time=time. time()
-    P_mat, R_mat = test_env1.precompute_matrices()
-    lp_reward, actual_power, beta_star = solve_single_bandit_relaxation(
-        P_mat, R_mat, test_env.avg_power
-    )
-    cost_time = time.time() - strat_time
+        # 6. Test LP bound
+        start_time = time.time()
+        P_mat, R_mat = test_env1.precompute_matrices()
+        lp_reward, actual_power, beta_star = solve_single_bandit_relaxation(
+            P_mat, R_mat, test_env.avg_power
+        )
+        lp_time = time.time() - start_time
 
-    if lp_reward is not None:
-        print(f"✔️ Policy [LP   ] -> Average reward: {lp_reward:.4f} ( {cost_time:.3f}s)")
-    else:
-        print("❌Gurobi Infeasible。")
+        if lp_reward is not None:
+            results.append(['LP_Bound', lp_reward, lp_time])
+            print(f"✔️ Policy [LP       ] -> Average reward: {lp_reward:.4f} ( {lp_time:.3f}s)")
+        else:
+            results.append(['LP_Bound', 'Infeasible', lp_time])
+            print("❌ Gurobi Infeasible。")
+        print("=" * 50 + "\n")
 
-    #print CVT result
-    if sol is not None:
-        single_cvt_reward = cvt_total_reward / test_env.N
-        cost_time = time.time() - start_time
-        print(f"✔️ Policy [CVT  ] -> Average reward: {single_cvt_reward:.4f} ( {cost_time:.3f}s)")
-    else:
-        print("❌ CVT  Infeasible！")
-
-
-    print("=" * 50 + "\n")
+        # 保存到Excel
+        df = pd.DataFrame(results, columns=['Policy', 'Average Reward per Charger', 'Computation Time (s)'])
+        df.to_excel(f'Performance_evaluation_penalty={test_env.penalty_weight}_ratio={test_env.power_ratio}.xlsx', index=False)
+        print(f"📊 Results saved to: Performance_evaluation_penalty={test_env.penalty_weight}_ratio={test_env.power_ratio}.xlsx")

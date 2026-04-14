@@ -27,6 +27,21 @@ A_SPACE = list(range(int(MAX_CHARGE) + 1))
 
 
 # --- E. 时间变动函数 ---
+
+def get_time_varying_p0(t):
+    hour = t % 24
+    # 设定价格相对值
+    p_peak = 1.6  # 高峰期成本权重
+    p_off = 0.5  # 低谷期成本权重 (约为高峰的30%)
+
+    # 下午 12:00 到 18:00 是高峰 (Chen et al. Setting)
+    if 12 <= hour < 18:
+        return p_peak
+    else:
+        return p_off
+
+
+
 '''
 #test1
 def get_time_varying_p0(t):
@@ -40,7 +55,7 @@ def get_time_varying_p0(t):
         # 奇数点：低位上行 (0.1, 0.14, 0.18...)
         # 每一个点都比后面的奇数点小，且比所有偶数点小
         return round(0.1 + (m * 0.1), 4)
-    '''
+
 #test2
 def get_time_varying_p0(t):
     # 1. 确保 24 小时周期
@@ -55,7 +70,8 @@ def get_time_varying_p0(t):
     # 2.6 是极差 (2.8 - 0.2)，23 是原始值的最大可能取值
     price = 0.2 + (raw_val * 2.6 / 23)
 
-    return round(price, 1)
+    return round(price, 1) 
+'''
 """
 #test
 def get_time_varying_p0(t):
@@ -76,18 +92,6 @@ def get_time_varying_p0(t):
         # 计算距离 t=1 过了多少个“2小时”
         steps = (t - 1) / 2
         return 2.6 + (steps * 0.05)
-
-def get_time_varying_p0(t):
-    hour = t % 24
-    # 设定价格相对值
-    p_peak = 1.6  # 高峰期成本权重
-    p_off = 0.5  # 低谷期成本权重 (约为高峰的30%)
-
-    # 下午 12:00 到 18:00 是高峰 (Chen et al. Setting)
-    if 12 <= hour < 18:
-        return p_peak
-    else:
-        return p_off
 
 
 
@@ -137,11 +141,12 @@ def get_time_varying_p0(t):
 """
 
 
-
+"""
+for t in range(40):
+    print(f"t={t}",get_time_varying_p0(t))
 def get_time_varying_prob( t):
     return 0.5
 """
-
 
 def get_time_varying_prob(t):
     hour_of_day = t % 24
@@ -150,7 +155,5 @@ def get_time_varying_prob(t):
                    0.91872146, 0.91598174, 0.86037544, 0.80375444, 0.80892948, 0.77148656,
                    0.72683917, 0.57138508, 0.42049721, 0.28533739, 0.20943683, 0.12897007]
     return prob_values[hour_of_day]
-"""
 
-for t in range(40):
-    print(f"t={t}",get_time_varying_p0(t))
+

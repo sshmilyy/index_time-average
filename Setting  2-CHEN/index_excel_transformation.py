@@ -2,23 +2,36 @@ import numpy as np
 import pandas as pd
 
 # 1. 读取你最新的 .npy 文件
-file_path = 'index_cache_period=24_pw=0.8_test2_varying_Bernoulli.npy'
+file_path = 'index_xu_cache_period=24_pw=0.8_Bernoulli.npy'
 data = np.load(file_path)
 
-# 2. 设置输出的 Excel 文件名
-output_file = 'output_24_tables_penal0.8test2_varying.xlsx'
+# 2. 设置输出文件名
+output_file = 'merged_output_24_tables.xlsx'
 
-# 3. 创建 Excel 写入器
-with pd.ExcelWriter(output_file) as writer:
-    # 循环 24 次，每次取出一份 67x3 的数据
-    for i in range(24):
-        # 提取切片数据
-        df_slice = pd.DataFrame(data[:, i, :])
+# 用于存储所有 DataFrame 的列表
+all_tables = []
 
-        # 为了美观，给这 3 列加上表头
-        df_slice.columns = ['Value_1', 'Value_2', 'Value_3']
+# 3. 循环处理数据
+for i in range(24):
+    # 提取切片数据 (67x3)
+    df_slice = pd.DataFrame(data[:, i])
 
-        # 将其保存为一个新的 Sheet，名字叫 Table_1, Table_2 ... Table_24
-        df_slice.to_excel(writer, sheet_name=f'Table_{i + 1}', index=False)
+    # 设置表头，Table_n 作为前缀方便区分
+    df_slice.columns = [f'T{i + 1}_V1']
 
-print(f"转换成功！已生成包含 24 个表格的 Excel 文件：{output_file}")
+    # 将当前表格加入列表
+    all_tables.append(df_slice)
+
+    # 如果不是最后一个表格，插入一个空列 DataFrame
+    if i < 23:
+        # 创建一个与原数据行数相同（67行）、宽度为1的空 DataFrame
+        empty_col = pd.DataFrame({'': [''] * data.shape[0]})
+        all_tables.append(empty_col)
+
+# 4. 横向合并 (axis=1)
+merged_df = pd.concat(all_tables, axis=1)
+
+# 5. 保存到单个 Excel Sheet 中
+merged_df.to_excel(output_file, index=False)
+
+print(f"转换成功！已生成合并后的 Excel 文件：{output_file}")

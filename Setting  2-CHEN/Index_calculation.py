@@ -15,10 +15,11 @@ class WhittleSolver:
     def __init__(self, env):
         # 1. 接入统一环境
         self.env = env
-
         # case1:constant, price=1.0,prob=0.5
-        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
-        # case1:time varying
+        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
+        # case1:test2
+        #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
+        # case2:time varying
         #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
         self.index_table = None
 
@@ -218,6 +219,138 @@ class WhittleSolver:
         print("=" * 65 + "\n")
 
 
+class WhittleSolverXu(WhittleSolver):
+    """
+    专为 Xu Policy (Binary Action: 0 or MAX_CHARGE) 设计的 Index 求解器。
+    它继承自多动作版的 WhittleSolver，但强制约束计算仅在两个极端动作之间进行。
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        # 为 Xu index 创建独立的缓存文件
+        # case1:constant, price=1.0,prob=0.5
+        self.filename_Xu = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
+        # case1:test2
+        #self.filename = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
+        # case2:time varying
+        #self.filename = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
+        self.index_table_Xu = None
+
+    def _solve_rvi_Xu(self, nu, h_init=None):
+        """限制在 [0, MAX_CHARGE] 两个动作的相对价值迭代"""
+        tol = 1e-3
+        if h_init is None:
+            h = np.zeros((ps.period, ps.NUM_STATES))
+        else:
+            h = h_init.copy()
+
+        # 仅截取动作 0 和 MAX_CHARGE (ps.MAX_CHARGE 的 index 刚好是 ps.MAX_CHARGE)
+        action_indices = [0, ps.MAX_CHARGE]
+        R_nu = self.R_base[:, :, action_indices] - nu * self.A_mat[:, :, action_indices]
+        P_mat_Xu = self.P_mat[:, :, action_indices, :]
+
+        for _ in range(50):
+            h_new = np.zeros((ps.period, ps.NUM_STATES))
+            for t in reversed(range(ps.period)):
+                t_next = (t + 1) % ps.period
+                # 计算期望的未来价值，形状匹配 (NUM_STATES, 2)
+                future_v = np.dot(P_mat_Xu[t], h[t_next])
+                q_vals = R_nu[t] + future_v
+                h_new[t] = np.max(q_vals, axis=1)
+
+            rho = h_new[0, 0]
+            h_new -= rho
+            if np.max(np.abs(h_new - h)) < tol:
+                h = h_new.copy()
+                break
+            h = h_new.copy()
+        return h
+
+    def _find_index_Xu(self, s, t):
+        """二分查找 Xu Index: 平衡 a=0 与 a=MAX_CHARGE"""
+        low, high = 0, 20.0  # 扩大搜索范围以防出现极端的惩罚
+        s_idx = ps.S_TO_IDX[s]
+
+        for _ in range(25):  # 提升二分查找精度
+            mid = (low + high) / 2
+            h = self._solve_rvi_Xu(mid)
+            t_next = (t + 1) % ps.period
+
+            # 动作 a = MAX_CHARGE 的 Q 值
+            future_v_max = np.dot(self.P_mat[t, s_idx, ps.MAX_CHARGE], h[t_next])
+            q_max = self.R_base[t, s_idx, ps.MAX_CHARGE] - mid * ps.MAX_CHARGE + future_v_max
+
+            # 动作 a = 0 的 Q 值
+            future_v_0 = np.dot(self.P_mat[t, s_idx, 0], h[t_next])
+            q_0 = self.R_base[t, s_idx, 0] - mid * 0 + future_v_0
+
+            # 寻找临界点
+            if q_max > q_0:
+                low = mid
+            else:
+                high = mid
+
+        return (low + high) / 2
+
+    def get_index_table_Xu(self):
+        """生成并缓存 Xu Index Table。它的形状为 (NUM_STATES, period)，不再有动作维度 k。"""
+        if os.path.exists(self.filename_Xu):
+            print(f"Loading cached Xu Index table from {self.filename_Xu}...")
+            self.index_table_Xu = np.load(self.filename_Xu)
+            return self.index_table_Xu
+
+        print("Computing Xu Index Matrix (Binary Actions)...")
+        # 由于动作仅有0和MAX_CHARGE，所以每个状态只需对应 1 个指数
+        self.index_table_Xu = np.zeros((ps.NUM_STATES, ps.period))
+
+        start_time = time.time()
+        for t in range(ps.period):
+            for s in ps.S_SPACE:
+                s_idx = ps.S_TO_IDX[s]
+                r, l = s
+                # 只有 L>0 且 R>0 时才需要计算有效 Index
+                if r == 0 or l == 0:
+                    self.index_table_Xu[s_idx, t] = 0.0
+                else:
+                    self.index_table_Xu[s_idx, t] = self._find_index_Xu(s, t)
+
+        np.save(self.filename_Xu, self.index_table_Xu)
+        print(f"Xu Index table saved. Time cost: {time.time() - start_time:.2f}s")
+        return self.index_table_Xu
+
+    def display_index_Xu(self, target_l, target_t):
+        """全景视角查看 Xu Index 矩阵"""
+        if self.index_table_Xu is None:
+            self.get_index_table_Xu()
+
+        print(f"\n" + "=" * 65)
+        print(f"📊 Xu Index Matrix (剩余时间 L={target_l}, 时刻 t={target_t})")
+        print("=" * 65)
+
+        header = f"{'需求(R)':<10}"
+        for k in range(ps.MAX_CHARGE):
+            header += f"| {'动作 ' + str(k) + ' vs ' + str(k + 1):<15}"
+        print(header)
+        print("-" * 65)
+
+        results = []
+        for s_idx, s in enumerate(ps.S_SPACE):
+            r, l = s
+            if l == target_l:
+                row_str = f"{r:<10}"
+                for k in range(ps.MAX_CHARGE):
+                    val = self.index_table_Xu[s_idx, target_t]
+                    row_str += f"| {val:<15.4f}"
+                results.append((r, row_str))
+
+        results = sorted(results, key=lambda x: x[0])
+        for r, row_str in results:
+            print(row_str)
+
+        print("=" * 65 + "\n")
+
+
+
 # ==========================================================
 # 测试与运行入口
 # ==========================================================
@@ -225,14 +358,14 @@ if __name__ == "__main__":
     from charging_env import ChargingEnv
 
     # 1. 创建你的统一规则对象，传入测试参数
-    for penalty_weight in [0.8]:
+    for penalty_weight in [0.2,0.4,0.6,0.8]:
         test_env = ChargingEnv(N=10, power_ratio=0.6, penalty_weight=penalty_weight)
 
         # 2. 将环境丢给求解器
-        solver = WhittleSolver(test_env)
+        solver = WhittleSolverXu(test_env)
 
         # 3. 极速求解或加载
-        table = solver.get_index_table()
+        table_Xu = solver.get_index_table_Xu()
 
         # 4. 打印检查 (T=1, 剩余时间 L=2)
-        solver.display_index(target_l=2, target_t=1)
+        solver.display_index_Xu(target_l=2, target_t=1)
