@@ -2,7 +2,7 @@ import os
 import numpy as np
 import time
 import concurrent.futures
-
+from pathlib import Path
 # 1. 纯净导入基础物理常量
 import parameter_setting_CHEN106_1 as ps
 
@@ -15,12 +15,18 @@ class WhittleSolver:
     def __init__(self, env):
         # 1. 接入统一环境
         self.env = env
+
+        self.save_dir = Path("results_npy")
+        self.save_dir.mkdir(parents=True, exist_ok=True)  # 如果不存在则创建文件夹
+
         # case1:constant, price=1.0,prob=0.5
-        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
+        filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
         # case1:test2
         #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
         # case2:time varying
         #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
+
+        self.file_path = self.save_dir / filename
         self.index_table = None
 
         # --- 矩阵预分配 ---
@@ -178,13 +184,13 @@ class WhittleSolver:
 
     def get_index_table(self, force_recompute=False):
         """对外接口：智能获取 Index 表"""
-        if not force_recompute and os.path.exists(self.filename):
-            print(f"✅  {self.filename} Loading！")
-            self.index_table = np.load(self.filename)
+        if not force_recompute and self.file_path.exists():
+            print(f"✅  {self.file_path} Loading！")
+            self.index_table = np.load(self.file_path)
         else:
             self.index_table = self._calculate_all()
-            np.save(self.filename, self.index_table)
-            print(f"💾 Result saved in {self.filename}")
+            np.save(self.file_path, self.index_table)
+            print(f"💾 Result saved in {self.file_path}")
         return self.index_table
 
     def display_index(self, target_l, target_t):
@@ -227,9 +233,13 @@ class WhittleSolverXu(WhittleSolver):
 
     def __init__(self, env):
         super().__init__(env)
+
+
         # 为 Xu index 创建独立的缓存文件
         # case1:constant, price=1.0,prob=0.5
-        self.filename_Xu = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
+        filename_Xu = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
+        self.file_path_Xu = self.save_dir / filename_Xu
+
         # case1:test2
         #self.filename = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
         # case2:time varying
@@ -294,9 +304,9 @@ class WhittleSolverXu(WhittleSolver):
 
     def get_index_table_Xu(self):
         """生成并缓存 Xu Index Table。它的形状为 (NUM_STATES, period)，不再有动作维度 k。"""
-        if os.path.exists(self.filename_Xu):
-            print(f"Loading cached Xu Index table from {self.filename_Xu}...")
-            self.index_table_Xu = np.load(self.filename_Xu)
+        if self.file_path_Xu.exists():
+            print(f"Loading cached Xu Index table from {self.file_path_Xu}...")
+            self.index_table_Xu = np.load(self.file_path_Xu)
             return self.index_table_Xu
 
         print("Computing Xu Index Matrix (Binary Actions)...")
@@ -314,8 +324,8 @@ class WhittleSolverXu(WhittleSolver):
                 else:
                     self.index_table_Xu[s_idx, t] = self._find_index_Xu(s, t)
 
-        np.save(self.filename_Xu, self.index_table_Xu)
-        print(f"Xu Index table saved. Time cost: {time.time() - start_time:.2f}s")
+        np.save(self.file_path_Xu, self.index_table_Xu)
+        print(f"💾 Result saved in {self.file_path_Xu}")
         return self.index_table_Xu
 
     def display_index_Xu(self, target_l, target_t):

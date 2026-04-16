@@ -4,8 +4,10 @@ from gurobipy import GRB
 from pandas import DataFrame
 from scipy.stats import t
 import matplotlib.pyplot as plt
+from pathlib import Path
 import parameter_setting_CHEN106_1 as ps  # 【改动1】：统一从 ps 获取分布常量
-
+EXCEL_DIR = Path("Results_excel")
+EXCEL_DIR.mkdir(parents=True, exist_ok=True)
 
 # ==========================================
 # 辅助函数：从 env 获取参数
@@ -563,5 +565,7 @@ if __name__ == "__main__":
 
         # 保存到Excel
         df = pd.DataFrame(results, columns=['Policy', 'Average Reward per Charger', 'Computation Time (s)'])
-        df.to_excel(f'Performance_evaluation_penalty={test_env.penalty_weight}_ratio={test_env.power_ratio}.xlsx', index=False)
-        print(f"📊 Results saved to: Performance_evaluation_penalty={test_env.penalty_weight}_ratio={test_env.power_ratio}.xlsx")
+        file_name = f'Performance_evaluation_penalty={test_env.penalty_weight}_ratio={test_env.power_ratio}.xlsx'
+        save_path = EXCEL_DIR / file_name
+        df.to_excel(save_path, index=False)
+        print(f"📊 Results saved to: {save_path}")

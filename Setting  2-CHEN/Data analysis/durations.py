@@ -1,7 +1,7 @@
 import pandas as pd
 
 # 1. 读取数据
-df = pd.read_csv('RAW_data.csv')
+df = pd.read_csv('Raw_Data.csv')
 
 # 2. 清洗数据
 # 强制转为数字，处理非数字字符

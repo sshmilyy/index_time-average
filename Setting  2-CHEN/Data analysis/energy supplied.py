@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # 1. 读取数据
-df = pd.read_csv('RAW_data.csv')
+df = pd.read_csv('Raw_Data.csv')
 
 
 # 2. 数据清洗 (针对 EnergySupplied)
