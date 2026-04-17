@@ -1,6 +1,6 @@
 # charging_env.py
 import numpy as np
-import parameter_setting_CHEN106_1 as ps
+import parameter_setting_CHEN106 as ps
 
 
 class ChargingEnv:

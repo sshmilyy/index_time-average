@@ -4,7 +4,7 @@ import time
 import concurrent.futures
 from pathlib import Path
 # 1. 纯净导入基础物理常量
-import parameter_setting_CHEN106_1 as ps
+import parameter_setting_CHEN106 as ps
 
 
 # ==========================================================
@@ -20,13 +20,13 @@ class WhittleSolver:
         self.save_dir.mkdir(parents=True, exist_ok=True)  # 如果不存在则创建文件夹
 
         # case1:constant, price=1.0,prob=0.5
-        filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
-        # case1:test2
-        #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
-        # case2:time varying
         #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
+        # case2:time varying p_0=1.6,0.5, and T=24 prob
+        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1605_Bernoulli.npy"
+        # case3:test2
+        #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
 
-        self.file_path = self.save_dir / filename
+        self.file_path = self.save_dir / self.filename
         self.index_table = None
 
         # --- 矩阵预分配 ---
@@ -237,7 +237,7 @@ class WhittleSolverXu(WhittleSolver):
 
         # 为 Xu index 创建独立的缓存文件
         # case1:constant, price=1.0,prob=0.5
-        filename_Xu = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_1610_Bernoulli.npy"
+        filename_Xu = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_1605_Bernoulli.npy"
         self.file_path_Xu = self.save_dir / filename_Xu
 
         # case1:test2
@@ -373,9 +373,11 @@ if __name__ == "__main__":
 
         # 2. 将环境丢给求解器
         solver = WhittleSolverXu(test_env)
-
+        solver1 = WhittleSolver(test_env)
         # 3. 极速求解或加载
         table_Xu = solver.get_index_table_Xu()
-
+        table = solver.get_index_table()
         # 4. 打印检查 (T=1, 剩余时间 L=2)
         solver.display_index_Xu(target_l=2, target_t=1)
+        solver.display_index(target_l=2, target_t=1)
+

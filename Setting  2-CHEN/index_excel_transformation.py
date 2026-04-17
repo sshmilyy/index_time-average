@@ -8,11 +8,11 @@ EXCEL_DIR.mkdir(parents=True, exist_ok=True)
 npy_dir = Path("Results_npy")
 npy_dir.mkdir(parents=True, exist_ok=True)
 # 1. 读取你最新的 .npy 文件
-file_path = npy_dir / 'index_Xu_cache_period=24_pw=0.8_1610_Bernoulli.npy'
+file_path = npy_dir / 'index_cache_period=24_pw=0.8_1610_Bernoulli.npy'
 data = np.load(file_path)
 
 # 2. 设置输出文件名
-output_file = EXCEL_DIR / 'merged_output_24_tables.xlsx'
+output_file = EXCEL_DIR / 'merged_output_24_pw=0.8_1610.xlsx'
 
 # 用于存储所有 DataFrame 的列表
 all_tables = []
@@ -20,7 +20,7 @@ all_tables = []
 # 3. 循环处理数据
 for i in range(24):
     # 提取切片数据 (67x3)
-    df_slice = pd.DataFrame(data[:, i])
+    df_slice = pd.DataFrame(data[:, i, :])
 
     # 设置表头，Table_n 作为前缀方便区分
     df_slice.columns = [f'T{i + 1}_V1']
