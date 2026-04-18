@@ -12,7 +12,7 @@ if __name__ == "__main__":
     print("🚀  Optimality Evaluation")
 
     # 1. 设定测试网格
-    N_list = [10,50,100,300,500]
+    N_list = [10,40,70,100,200,300]
     penalty_weights_to_test = [0.2,0.4,0.6,0.8]
     power_ratios_to_test = [0.6]
 

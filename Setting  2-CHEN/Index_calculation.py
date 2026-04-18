@@ -16,7 +16,7 @@ class WhittleSolver:
         # 1. 接入统一环境
         self.env = env
 
-        self.save_dir = Path("results_npy")
+        self.save_dir = Path("Results_npy")
         self.save_dir.mkdir(parents=True, exist_ok=True)  # 如果不存在则创建文件夹
 
         # case1:constant, price=1.0,prob=0.5

@@ -6,7 +6,9 @@ from charging_env import ChargingEnv
 from Performance_Evaluation_CHEN import run_experiments
 from Index_calculation import WhittleSolver  # 引入 Index 求解器
 import pandas as pd
-
+from pathlib import Path  # <--- 新增
+EXCEL_DIR = Path("Results_excel")
+EXCEL_DIR.mkdir(parents=True, exist_ok=True)
 # ==========================================
 # 1. 到达生成器 (保持不变)
 # ==========================================
@@ -53,7 +55,7 @@ if __name__ == "__main__":
     print("🚀 Starting asymptotic equivalence verification of Poisson and Bernoulli arrivals...")
 
     # Simulation Parameters
-    N_list = [10, 40,70, 100, 200, 300]
+    N_list = [10, 40,70, 100, 200, 300,500,1000]
     POLICIES = ['gdy', 'llf', 'lrf', 'new', 'index']
 
     TEST_POWER_RATIO = 0.8
@@ -121,7 +123,7 @@ if __name__ == "__main__":
         for N in N_list:
             temp_env = ChargingEnv(N=N, power_ratio=TEST_POWER_RATIO, penalty_weight=TEST_PENALTY)
             solver = WhittleSolver(temp_env)
-            index_tables_cache[N] = solver.get_index_table(                                                                                                                                       4)
+            index_tables_cache[N] = solver.get_index_table()
             print(f"   [OK] Index table for N={N} ready.")
 
     # List to collect all experiment records for Excel
@@ -198,7 +200,7 @@ if __name__ == "__main__":
     df = pd.DataFrame(all_records)
 
     # --- Export to Excel ---
-    excel_filename = "Poisson_Bernoulli_Equivalence.xlsx"
+    excel_filename = EXCEL_DIR / "Poisson_Bernoulli_Equivalence.xlsx"
 
     df_excel = df.rename(columns={
         'Policy': 'Policy',

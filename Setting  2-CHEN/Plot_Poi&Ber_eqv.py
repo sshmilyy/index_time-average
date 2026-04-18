@@ -1,11 +1,19 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from pathlib import Path  # <--- 新增
+
+
+
 
 # ==========================================
 # 1. 读取已经跑好的 Excel 数据
 # ==========================================
 # 确保你的 Excel 文件名和之前代码导出的一致
-file_path = "Poisson_Bernoulli_Equivalence.xlsx"
+EXCEL_DIR = Path("results_excel")
+PLOT_DIR = Path("plots")
+PLOT_DIR.mkdir(parents=True, exist_ok=True)
+file_path = EXCEL_DIR / "Poisson_Bernoulli_Equivalence.xlsx" # <--- 修改这里
+
 try:
     df = pd.read_excel(file_path)
 except FileNotFoundError:
@@ -94,11 +102,12 @@ ax.legend(fontsize=11,
 
 plt.tight_layout()
 
-# 保存高清矢量图和 PNG
-plt.savefig("Arrival_Equivalence_Plot.pdf", format='pdf', dpi=300)
-plt.savefig("Arrival_Equivalence_Plot.png", format='png', dpi=300)
+# 将图片存入 PLOT_DIR
+pdf_path = PLOT_DIR / "Arrival_Equivalence_Plot.pdf"
+png_path = PLOT_DIR / "Arrival_Equivalence_Plot.png"
 
-print("✅ 画图完成！图表已保存为 Arrival_Equivalence_Plot.pdf 和 .png")
+plt.savefig(pdf_path, format='pdf', dpi=300)
+plt.savefig(png_path, format='png', dpi=300)
 
-# 在 PyCharm 中弹出交互式窗口展示
+print(f"✅ 画图完成！图表已保存至: {PLOT_DIR} 文件夹中")
 plt.show()

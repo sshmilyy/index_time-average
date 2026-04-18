@@ -539,14 +539,6 @@ if __name__ == "__main__":
             results.append([alg.upper(), single_charger_reward, cost_time])
             print(f"✔️ Policy [{alg.upper():<9}] -> Average reward: {single_charger_reward:.4f} ( {cost_time:.3f}s)")
 
-        if sol is not None:
-            single_cvt_reward = cvt_total_reward / test_env.N
-            results.append(['CVT', single_cvt_reward, cvt_time])
-            print(f"✔️ Policy [CVT      ] -> Average reward: {single_cvt_reward:.4f} ( {cvt_time:.3f}s)")
-        else:
-            results.append(['CVT', 'Infeasible', cvt_time])
-            print("❌ CVT Infeasible！")
-
         # 6. Test LP bound
         start_time = time.time()
         P_mat, R_mat = test_env1.precompute_matrices()
@@ -561,6 +553,16 @@ if __name__ == "__main__":
         else:
             results.append(['LP_Bound', 'Infeasible', lp_time])
             print("❌ Gurobi Infeasible。")
+
+        if sol is not None:
+            single_cvt_reward = cvt_total_reward / test_env.N
+            results.append(['CVT', single_cvt_reward, cvt_time])
+            print(f"✔️ Policy [CVT      ] -> Average reward: {single_cvt_reward:.4f} ( {cvt_time:.3f}s)")
+        else:
+            results.append(['CVT', 'Infeasible', cvt_time])
+            print("❌ CVT Infeasible！")
+
+
         print("=" * 50 + "\n")
 
         # 保存到Excel
