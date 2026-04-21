@@ -2,8 +2,6 @@ import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
 from pandas import DataFrame
-from scipy.stats import t
-import matplotlib.pyplot as plt
 from pathlib import Path
 import parameter_setting_CHEN106 as ps  # 【改动1】：统一从 ps 获取分布常量
 EXCEL_DIR = Path("Results_excel")

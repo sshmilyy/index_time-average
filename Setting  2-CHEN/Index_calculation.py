@@ -20,9 +20,9 @@ class WhittleSolver:
         self.save_dir.mkdir(parents=True, exist_ok=True)  # 如果不存在则创建文件夹
 
         # case1:constant, price=1.0,prob=0.5
-        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
+        #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
         # case2:time varying p_0=1.6,0.5, and T=24 prob
-        #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1605_Bernoulli.npy"
+        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1605_Bernoulli.npy"
         # case3:test2
         #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
 

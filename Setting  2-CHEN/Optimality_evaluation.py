@@ -70,5 +70,5 @@ if __name__ == "__main__":
 
     # 6. 保存为 excel 给论文画图用
     df = pd.DataFrame(all_results)
-    df.to_excel(f"Large_Asymptotic_Optimality_Results_1605_price.xlsx", index=False)
-    print("\n🎉 Done！Result saved in the Large_Asymptotic_Optimality_Results_1605_price.xlsx")
+    df.to_excel(f"Small_Asymptotic_Optimality_Results_1605_price.xlsx", index=False)
+    print("\n🎉 Done！Result saved in the Small_Asymptotic_Optimality_Results_1605_price.xlsx")

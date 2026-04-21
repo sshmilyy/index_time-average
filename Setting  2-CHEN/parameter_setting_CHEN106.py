@@ -30,7 +30,16 @@ A_SPACE = list(range(int(MAX_CHARGE) + 1))
 
 
 def get_time_varying_p0(t):
- return 1
+    hour = t % 24
+    # 设定价格相对值
+    p_peak = 1.6  # 高峰期成本权重
+    p_off = 0.5  # 低谷期成本权重 (约为高峰的30%)
+
+    # 下午 12:00 到 18:00 是高峰 (Chen et al. Setting)
+    if 12 <= hour < 18:
+        return p_peak
+    else:
+        return p_off
 
 
 '''
@@ -189,6 +198,6 @@ def get_time_varying_prob(t):
     return prob_values[hour_of_day]
 '''
 
-#2. large change
+#3. small change
 def get_time_varying_prob(t):
-    return get_linear_value(t, 0.9, 0.1)
+    return get_linear_value(t, 0.7, 0.3)

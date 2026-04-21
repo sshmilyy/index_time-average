@@ -4,7 +4,16 @@ from gurobipy import GRB
 import parameter_setting_CHEN106 as ps
 import numpy as np
 
+_GLOBAL_GUROBI_ENV = None
 
+def get_gurobi_env():
+    global _GLOBAL_GUROBI_ENV
+    if _GLOBAL_GUROBI_ENV is None:
+        # 只初始化一次
+        _GLOBAL_GUROBI_ENV = gp.Env(empty=True)
+        _GLOBAL_GUROBI_ENV.setParam("OutputFlag", 0)
+        _GLOBAL_GUROBI_ENV.start()
+    return _GLOBAL_GUROBI_ENV
 def solve_single_bandit_relaxation(P_mat, R_mat, avg_power_per_charger):
     """
     求解 Pr1(β) - 带有功率限制的原始 LP
@@ -16,12 +25,7 @@ def solve_single_bandit_relaxation(P_mat, R_mat, avg_power_per_charger):
     T = P_mat.shape[0]
     num_actions = P_mat.shape[1]
     num_states = P_mat.shape[2]
-
-    # 临时创建一个 Gurobi 环境，避免全局环境污染
-    env_gurobi = gp.Env(empty=True)
-    env_gurobi.setParam("OutputFlag", 0)
-    env_gurobi.start()
-
+    env_gurobi = get_gurobi_env()
     model = gp.Model("Single_Bandit_Relaxation", env=env_gurobi)
 
     # 决策变量：x[t, s, a]
@@ -70,22 +74,14 @@ def solve_single_bandit_relaxation(P_mat, R_mat, avg_power_per_charger):
     # 求解模型
     model.optimize()
 
-    # 🌟 修复2：无论求解成功还是失败，都必须彻底清理 Gurobi 的 C++ 内存指针！
+    res = (None, None, None)
     if model.status == GRB.OPTIMAL:
-        optimal_reward = model.ObjVal
-        actual_power = avg_power_expr.getValue()
-        beta_star = abs(capacity_constr.Pi)
+        # 注意：要在 model 释放前 getValue()
+        res = (model.ObjVal, avg_power_expr.getValue(), abs(capacity_constr.Pi))
 
-        # 提取完数据后释放
-        model.dispose()
-        env_gurobi.dispose()
-        return optimal_reward, actual_power, beta_star
-    else:
-        print("求解失败！模型可能不可行。")
-        model.dispose()
-        env_gurobi.dispose()
-        return None, None, None
-
+    # 🌟 只释放模型，不释放 env_gurobi！
+    model.dispose()
+    return res
 
 # ==========================================
 # 独立测试模块
