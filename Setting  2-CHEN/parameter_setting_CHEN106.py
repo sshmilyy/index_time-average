@@ -28,6 +28,12 @@ A_SPACE = list(range(int(MAX_CHARGE) + 1))
 
 # --- E. 时间变动函数 ---
 
+
+def get_time_varying_p0(t):
+ return 1
+
+
+'''
 def get_time_varying_p0(t):
     hour = t % 24
     # 设定价格相对值
@@ -41,8 +47,6 @@ def get_time_varying_p0(t):
         return p_off
 
 
-
-'''
 #test1
 def get_time_varying_p0(t):
     m = t % 24
@@ -110,7 +114,8 @@ def get_time_varying_p0(t):
     # 判断奇偶性
     if t % 2 == 0:
         # 偶数情况：从 t=0 (值为3) 开始，每2小时减 0.1
-        # 计算距离 t=0 过了多少个“2小时”
+        # 计算距离 t=0 过了多少个“2小时”def get_time_varying_p0(t):
+        #     return 1
         steps = t / 2
         return 3.0 - (steps * 0.1)
     else:
@@ -119,8 +124,7 @@ def get_time_varying_p0(t):
         steps = (t - 1) / 2
         return 0.5 + (steps * 0.1)
 
-def get_time_varying_p0(t):
-    return 1
+
 
 def get_time_varying_p0(t):
     hour = t % 24
@@ -170,12 +174,12 @@ def get_time_varying_prob(t):
     return get_linear_value(t, 0.7, 0.3)
 
 # 3. 恒定模式
+
+
 def get_time_varying_prob(t):
     return 0.5
 
 
-
-'''
 def get_time_varying_prob(t):
     hour_of_day = t % 24
     prob_values = [0.08736682, 0.08148148, 0.04840183, 0.03845764, 0.03926941, 0.06889904,
@@ -183,3 +187,8 @@ def get_time_varying_prob(t):
                    0.91872146, 0.91598174, 0.86037544, 0.80375444, 0.80892948, 0.77148656,
                    0.72683917, 0.57138508, 0.42049721, 0.28533739, 0.20943683, 0.12897007]
     return prob_values[hour_of_day]
+'''
+
+#2. large change
+def get_time_varying_prob(t):
+    return get_linear_value(t, 0.9, 0.1)

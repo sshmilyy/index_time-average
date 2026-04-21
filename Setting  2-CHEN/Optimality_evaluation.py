@@ -6,8 +6,11 @@ from charging_env import ChargingEnv
 from r_beta import solve_single_bandit_relaxation
 from Index_calculation import WhittleSolver
 from Performance_Evaluation_CHEN import generate_arrival_sequence_poi, run_experiments
-import faulthandler
-faulthandler.enable()
+
+from pathlib import Path
+EXCEL_DIR = Path("Results_excel")
+EXCEL_DIR.mkdir(parents=True, exist_ok=True)
+
 if __name__ == "__main__":
     print("🚀  Optimality Evaluation")
 
@@ -21,7 +24,7 @@ if __name__ == "__main__":
 
     for pw in penalty_weights_to_test:
         for pr in power_ratios_to_test:
-            env1 = ChargingEnv(N=10, power_ratio=pr, penalty_weight=pw, T=360)
+            env1 = ChargingEnv(N=10, power_ratio=pr, penalty_weight=pw,T=24)
 
             # 3. 求解 LP 理论上限
             P_mat, R_mat = env1.precompute_matrices()
@@ -42,7 +45,7 @@ if __name__ == "__main__":
 
 
                 # 5. 运行仿真验证
-                NUM_SIMULATIONS = 50
+                NUM_SIMULATIONS = 100
                 sim_rewards = []
                 for _ in range(NUM_SIMULATIONS):
                     arr_seq = generate_arrival_sequence_poi(env)
@@ -65,7 +68,7 @@ if __name__ == "__main__":
                     "LP_Bound": lp_reward, "Sim_Reward": mean_sim_reward, "Gap(%)": gap
                 })
 
-    # 6. 保存为 CSV 给论文画图用
+    # 6. 保存为 excel 给论文画图用
     df = pd.DataFrame(all_results)
-    df.to_csv(f"Large_Asymptotic_Optimality_Results.csv", index=False)
-    print("\n🎉 Done！Result saved in the Small_Asymptotic_Optimality_Results.csv")
+    df.to_excel(f"Large_Asymptotic_Optimality_Results_1605_price.xlsx", index=False)
+    print("\n🎉 Done！Result saved in the Large_Asymptotic_Optimality_Results_1605_price.xlsx")

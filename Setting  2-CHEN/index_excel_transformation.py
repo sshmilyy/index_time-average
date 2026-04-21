@@ -8,11 +8,11 @@ EXCEL_DIR.mkdir(parents=True, exist_ok=True)
 npy_dir = Path("Results_npy")
 npy_dir.mkdir(parents=True, exist_ok=True)
 # 1. 读取你最新的 .npy 文件
-file_path = npy_dir / 'index_cache_period=24_pw=0.8_1610_Bernoulli.npy'
+file_path = npy_dir / 'index_cache_period=24_pw=0.8_1605_Bernoulli.npy'
 data = np.load(file_path)
 
 # 2. 设置输出文件名
-output_file = EXCEL_DIR / 'merged_output_24_pw=0.8_1610.xlsx'
+output_file = EXCEL_DIR / 'merged_output_24_pw=0.8_1605.xlsx'
 
 # 用于存储所有 DataFrame 的列表
 all_tables = []

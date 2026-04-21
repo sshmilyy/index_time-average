@@ -20,9 +20,9 @@ class WhittleSolver:
         self.save_dir.mkdir(parents=True, exist_ok=True)  # 如果不存在则创建文件夹
 
         # case1:constant, price=1.0,prob=0.5
-        #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
+        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
         # case2:time varying p_0=1.6,0.5, and T=24 prob
-        self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1605_Bernoulli.npy"
+        #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_1605_Bernoulli.npy"
         # case3:test2
         #self.filename = f"index_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
 
@@ -236,14 +236,15 @@ class WhittleSolverXu(WhittleSolver):
 
 
         # 为 Xu index 创建独立的缓存文件
-        # case1:constant, price=1.0,prob=0.5
-        filename_Xu = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_1605_Bernoulli.npy"
-        self.file_path_Xu = self.save_dir / filename_Xu
+        # case1:time varying
+        self.filename_Xu = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_1605_Bernoulli.npy"
 
         # case1:test2
         #self.filename = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_test2_varying_Bernoulli.npy"
-        # case2:time varying
-        #self.filename = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
+        # case2:constant, price=1.0,prob=0.5
+        #self.filename_Xu = f"index_Xu_cache_period={ps.period}_pw={self.env.penalty_weight}_const1_Bernoulli.npy"
+        self.file_path_Xu = self.save_dir / self.filename_Xu
+
         self.index_table_Xu = None
 
     def _solve_rvi_Xu(self, nu, h_init=None):
